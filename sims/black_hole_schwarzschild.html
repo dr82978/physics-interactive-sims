@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>史瓦西黑洞模擬器 · Schwarzschild Black Hole Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+TC:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#05060c;
+    --bg2:#0a0e1c;
+    --ink:#e9ecf5;
+    --muted:#8b93ad;
+    --faint:#5b6480;
+    --line:rgba(140,160,210,.14);
+    --panel:rgba(16,20,38,.62);
+    --warm:#ff9c45;
+    --warm2:#ff5e3a;
+    --cool:#62d5ff;
+    --cool2:#3aa0ff;
+    --gold:#f3c969;
+    --ok:#54e0a6;
+    --crit:#ff7a5c;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --sans:'IBM Plex Sans TC',system-ui,sans-serif;
+    --disp:'Fraunces',Georgia,serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1200px 700px at 78% -8%, rgba(60,90,180,.16), transparent 60%),
+      radial-gradient(900px 600px at 8% 108%, rgba(120,60,160,.12), transparent 55%),
+      linear-gradient(180deg,var(--bg),var(--bg2) 60%, #04050a);
+    color:var(--ink);
+    font-family:var(--sans);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  .grain{position:fixed;inset:0;pointer-events:none;opacity:.035;z-index:50;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+  header{
+    max-width:1320px;margin:0 auto;padding:34px 28px 6px;
+    display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;
+  }
+  .brand{display:flex;flex-direction:column;gap:2px}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.42em;text-transform:uppercase;color:var(--cool);opacity:.8}
+  h1{font-family:var(--disp);font-weight:500;font-size:clamp(28px,4vw,46px);letter-spacing:.5px;line-height:1.02}
+  h1 em{font-style:italic;color:var(--gold)}
+  .sub{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.05em}
+  .eq{font-family:var(--mono);font-size:13px;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;padding:8px 16px;background:rgba(255,255,255,.02)}
+  .eq b{color:var(--cool)}
+
+  main{max-width:1320px;margin:0 auto;padding:18px 28px 60px;
+    display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:start}
+  @media(max-width:980px){main{grid-template-columns:1fr;padding:14px 16px 50px}}
+
+  .stage{position:relative;border:1px solid var(--line);border-radius:20px;overflow:hidden;
+    background:radial-gradient(120% 120% at 50% 40%, rgba(20,26,52,.55), rgba(6,8,16,.9));
+    box-shadow:0 30px 80px -40px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.04)}
+  canvas{display:block;width:100%;height:auto;aspect-ratio:1/1}
+  .badge{position:absolute;left:16px;top:14px;z-index:3;
+    font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    padding:8px 14px;border-radius:999px;border:1px solid var(--line);
+    background:rgba(8,10,20,.6);backdrop-filter:blur(8px);display:flex;align-items:center;gap:9px;
+    transition:.5s}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 12px var(--ok);transition:.5s}
+  .badge.bh{border-color:rgba(255,140,90,.5);color:var(--crit)}
+  .badge.bh .dot{background:var(--crit);box-shadow:0 0 14px var(--crit)}
+  .scaleNote{position:absolute;right:14px;bottom:12px;z-index:3;
+    font-family:var(--mono);font-size:10.5px;color:var(--muted);text-align:right;line-height:1.5;
+    background:rgba(6,8,16,.45);padding:6px 10px;border-radius:8px;max-width:62%}
+
+  .controls{display:flex;flex-direction:column;gap:16px}
+  .card{border:1px solid var(--line);border-radius:16px;background:var(--panel);
+    backdrop-filter:blur(10px);padding:18px 18px 20px}
+  .card h2{font-family:var(--mono);font-size:11px;letter-spacing:.32em;text-transform:uppercase;
+    color:var(--muted);font-weight:500;margin-bottom:14px;display:flex;justify-content:space-between}
+  .card h2 .gl{color:var(--cool)}
+
+  .ctl{margin-bottom:20px}
+  .ctl:last-child{margin-bottom:0}
+  .ctl .row{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:10px;gap:12px}
+  .ctl label{font-family:var(--sans);font-size:14px;font-weight:500;color:var(--ink);display:flex;align-items:center;gap:8px}
+  .ctl label .sym{font-family:var(--mono);color:var(--gold);font-size:13px}
+  .field{display:flex;align-items:center;gap:6px}
+  .field input{
+    width:150px;background:rgba(0,0,0,.32);border:1px solid var(--line);border-radius:9px;
+    color:var(--ink);font-family:var(--mono);font-size:13px;padding:7px 9px;text-align:right;outline:none;transition:.2s}
+  .field input:focus{border-color:var(--cool);box-shadow:0 0 0 3px rgba(98,213,255,.12)}
+  .field .unit{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:18px}
+
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:99px;outline:none;
+    background:linear-gradient(90deg,var(--cool2),var(--gold),var(--warm2));}
+  input[type=range].mass{background:linear-gradient(90deg,#2a3a66,var(--gold),var(--warm2));}
+  input[type=range].rad{background:linear-gradient(90deg,#2a3a66,var(--cool),#bfe9ff);}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#fff,#cfd7ee 40%,#8893b6);
+    border:1px solid rgba(255,255,255,.7);cursor:grab;box-shadow:0 2px 10px rgba(0,0,0,.6),0 0 0 6px rgba(255,255,255,.05)}
+  input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;border:1px solid #fff;
+    background:radial-gradient(circle at 35% 30%,#fff,#cfd7ee 40%,#8893b6);cursor:grab}
+  input[type=range]:active::-webkit-slider-thumb{cursor:grabbing;transform:scale(1.08)}
+  .ticks{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:7px;opacity:.7}
+  .ticks span{color:var(--muted)}
+  .ticks.pos{position:relative;height:14px;display:block}
+  .ticks.pos span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
+  .ticks.pos span:first-child{transform:none}
+  .ticks.pos span:last-child{transform:translateX(-100%)}
+  button:focus-visible,input:focus-visible,.preset:focus-visible{outline:2px solid var(--cool);outline-offset:2px}
+  .cell.dim .v{color:var(--muted)}
+  .cell .tag{font-family:var(--mono);font-size:9.5px;color:var(--faint);border:1px solid var(--line);border-radius:999px;padding:0 6px;margin-left:auto}
+
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  .preset{font-family:var(--mono);font-size:12px;color:var(--muted);cursor:pointer;
+    border:1px solid var(--line);background:rgba(255,255,255,.02);border-radius:999px;padding:7px 13px;transition:.2s}
+  .preset:hover{color:var(--ink);border-color:var(--cool);background:rgba(98,213,255,.08);transform:translateY(-1px)}
+
+  .data{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+  .cell{background:rgba(10,13,26,.85);padding:13px 14px}
+  .cell.full{grid-column:1/-1}
+  .cell .k{font-family:var(--sans);font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:5px}
+  .cell .k em{font-family:var(--mono);font-style:normal;color:var(--gold);font-size:11px}
+  .cell .v{font-family:var(--mono);font-size:16px;color:var(--ink);font-weight:500;letter-spacing:.01em;line-height:1.25}
+  .cell .v small{color:var(--muted);font-size:12px;font-weight:400}
+  .cell.hl .v{color:var(--cool)}
+  .cell.warm .v{color:var(--warm)}
+  sup{font-size:.72em}
+
+  footer{max-width:1320px;margin:0 auto;padding:8px 28px 50px;font-family:var(--mono);font-size:11px;color:var(--faint);line-height:1.8}
+  footer b{color:var(--muted)}
+  .flash{animation:flash .6s ease}
+  @keyframes flash{0%{background:rgba(98,213,255,.18)}100%{background:rgba(10,13,26,.85)}}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<header>
+  <div class="brand">
+    <span class="kicker">General Relativity · Schwarzschild Metric</span>
+    <h1>史瓦西<em>黑洞</em>模擬器</h1>
+    <span class="sub">當天體被壓縮到自身史瓦西半徑之內，事件視界便會形成。</span>
+  </div>
+  <div class="eq">r<sub>s</sub> = <b>2GM ⁄ c²</b></div>
+</header>
+
+<main>
+  <section class="stage">
+    <div class="badge" id="badge"><span class="dot"></span><span id="badgeText">恆星 / 一般天體</span></div>
+    <canvas id="cv" width="900" height="900"></canvas>
+    <div class="scaleNote" id="scaleNote"></div>
+  </section>
+
+  <section class="controls">
+    <div class="card">
+      <h2><span>輸入參數</span><span class="gl">INPUT</span></h2>
+
+      <div class="ctl">
+        <div class="row">
+          <label><span class="sym">M</span> 星球質量</label>
+          <div class="field">
+            <input id="massNum" type="text" inputmode="decimal" value="1.989e30">
+            <span class="unit">kg</span>
+          </div>
+        </div>
+        <input id="massSld" class="mass" type="range" min="20" max="45" step="0.01" value="30.298">
+        <div class="ticks pos" data-lo="20" data-hi="45" data-v="20,25,30,35,40,45"></div>
+      </div>
+
+      <div class="ctl">
+        <div class="row">
+          <label><span class="sym">R</span> 星球半徑</label>
+          <div class="field">
+            <input id="radNum" type="text" inputmode="decimal" value="6.957e8">
+            <span class="unit">m</span>
+          </div>
+        </div>
+        <input id="radSld" class="rad" type="range" min="-2" max="15" step="0.01" value="8.842">
+        <div class="ticks pos" data-lo="-2" data-hi="15" data-v="-2,2,6,10,15"></div>
+      </div>
+
+      <div class="ctl">
+        <div class="row" style="margin-bottom:8px"><label style="font-size:12px;color:var(--muted);font-weight:400">快速範例</label></div>
+        <div class="presets" id="presets"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span>物理量</span><span class="gl">OUTPUT</span></h2>
+      <div class="data" id="data"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <b>建模依據</b>　史瓦西真空解（不轉動、無電荷、球對稱）。事件視界半徑 r<sub>s</sub>=2GM/c²；光子球 1.5 r<sub>s</sub>；最內穩定圓軌道 ISCO 3 r<sub>s</sub>；黑洞陰影視半徑 (3√3/2) r<sub>s</sub> ≈ 2.598 r<sub>s</sub>。<br>
+  <b>視覺比例</b>　中央圖示呈現 <b>R 與 r<sub>s</sub> 的相對關係</b>（兩者比值才是「是否成為黑洞」的物理判準），並非整個宇宙的線性真實尺寸。背景星場採點質量透鏡（愛因斯坦環）近似來呈現光線偏折 α≈2r<sub>s</sub>/b 的視覺效果。
+</footer>
+
+<script>
+"use strict";
+// ── 物理常數（SI）──────────────────────────────
+const G   = 6.67430e-11;     // m^3 kg^-1 s^-2
+const C   = 2.99792458e8;    // m/s
+const HBAR= 1.054571817e-34; // J·s
+const KB  = 1.380649e-23;    // J/K
+const PI  = Math.PI;
+const SUNM= 1.98892e30, SUNR=6.957e8;
+const UNIVERSE_YR = 1.38e10; // 宇宙年齡 (yr)
+
+// ── 範圍 ───────────────────────────────────────
+const M_LO=20, M_HI=45, R_LO=-2, R_HI=15;
+
+// ── 狀態 ───────────────────────────────────────
+const state = { logM: 30.298, logR: 8.842 };        // log10 值
+let dispLogR  = 8.842;   // 動畫用：平滑顯示的 log10(R)
+let dispLogRs = 0;       // 動畫用：平滑顯示的 log10(r_s)
+let warmGlow  = 0;       // 視界形成程度（0=恆星 → 1=黑洞）
+
+// 長度→像素：有界對數映射。R 與 r_s 套用同一函數，
+// 故 (1) 視界大小隨質量單調變化 (2) 跨越臨界全程連續 (3) 整個範圍都塞進畫面。
+const MAP_LO = Math.log10(2*G*Math.pow(10,M_LO)/(C*C));   // 最小 r_s ≈ 1.5e-7 m
+const MAP_HI = Math.log10(Math.max(Math.pow(10,R_HI), 2*G*Math.pow(10,M_HI)/(C*C)));
+let Dmin=5, Dmax=120;    // 顯示半徑像素範圍（Dmax 於 resize 依畫布大小設定）
+function mapLen(log10L){ return Dmin + (Dmax-Dmin)*clamp((log10L-MAP_LO)/(MAP_HI-MAP_LO),0,1); }
+
+const $=id=>document.getElementById(id);
+const massNum=$("massNum"), radNum=$("radNum"), massSld=$("massSld"), radSld=$("radSld");
+
+// ── 數值格式（科學記號 + 上標）───────────────────
+const SUP={"0":"⁰","1":"¹","2":"²","3":"³","4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹","-":"⁻"};
+const sup=n=>String(n).split("").map(c=>SUP[c]||c).join("");
+function sci(x, sig=3){
+  if(!isFinite(x)) return "∞";
+  if(x===0) return "0";
+  const neg=x<0; x=Math.abs(x);
+  let e=Math.floor(Math.log10(x));
+  let m=x/Math.pow(10,e);
+  m=parseFloat(m.toFixed(sig-1));
+  if(m>=10){m/=10;e++;}
+  const mant=(neg?"-":"")+m.toFixed(sig-1);
+  if(e>=-2 && e<=3){ // 接近 1 的數直接顯示
+    let v=(neg?-1:1)*m*Math.pow(10,e);
+    return parseFloat(v.toPrecision(sig)).toString();
+  }
+  return `${mant}×10${sup(e)}`;
+}
+// 把秒換算成易讀時間
+function timeStr(sec){
+  if(!isFinite(sec)) return "∞";
+  const yr=sec/3.15576e7;
+  if(yr<1) return sci(sec)+" s";
+  return sci(yr)+" 年";
+}
+
+// ── 物理計算 ───────────────────────────────────
+function physics(M,R){
+  const rs = 2*G*M/(C*C);                 // 史瓦西半徑
+  const ratio = rs/R;                     // ≥1 → 黑洞
+  const isBH = ratio>=1;
+  const out = {M,R,rs,ratio,isBH};
+  out.compact   = R/rs;                   // 緊緻度 R/r_s
+  out.vesc      = Math.sqrt(2*G*M/R);     // 牛頓逃逸速度（>c 表示已成黑洞）
+  out.vescC     = Math.sqrt(rs/R);        // v_esc / c
+  out.gsurf     = G*M/(R*R);              // 表面重力
+  out.density   = M/((4/3)*PI*R*R*R);     // 平均密度
+  out.photon    = 1.5*rs;                 // 光子球
+  out.isco      = 3*rs;                   // ISCO
+  out.shadow    = (3*Math.sqrt(3)/2)*rs;  // 陰影視半徑
+  // 表面重力時間膨脹 √(1 - r_s/R)，重力紅移 z
+  if(R>rs){ out.dilate=Math.sqrt(1-rs/R); out.z=1/out.dilate-1; }
+  else    { out.dilate=0; out.z=Infinity; }
+  // 霍金溫度與蒸發壽命（黑洞才有意義）
+  out.Thawk = HBAR*Math.pow(C,3)/(8*PI*G*M*KB);
+  out.tevap = 5120*PI*G*G*Math.pow(M,3)/(HBAR*Math.pow(C,4));
+  return out;
+}
+
+// ── UI 同步 ────────────────────────────────────
+function syncFields(){
+  massNum.value = sciInput(Math.pow(10,state.logM));
+  radNum.value  = sciInput(Math.pow(10,state.logR));
+  massSld.value = state.logM;
+  radSld.value  = state.logR;
+}
+function sciInput(x){ // 給輸入框的緊湊科學記號
+  if(x===0) return "0";
+  const e=Math.floor(Math.log10(x)); let m=x/Math.pow(10,e);
+  m=parseFloat(m.toFixed(3));
+  if(e>=-2&&e<=4) return parseFloat(x.toPrecision(4)).toString();
+  return `${m}e${e}`;
+}
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+
+function setFromSliders(){
+  state.logM=parseFloat(massSld.value);
+  state.logR=parseFloat(radSld.value);
+  massNum.value=sciInput(Math.pow(10,state.logM));
+  radNum.value =sciInput(Math.pow(10,state.logR));
+  refresh();
+}
+function setFromField(which){
+  const el=which==="m"?massNum:radNum;
+  let v=parseFloat(el.value.replace(/[, ]/g,""));
+  if(!isFinite(v)||v<=0){ syncFields(); return; }
+  let lg=clamp(Math.log10(v), which==="m"?M_LO:R_LO, which==="m"?M_HI:R_HI);
+  if(which==="m"){state.logM=lg;massSld.value=lg;} else {state.logR=lg;radSld.value=lg;}
+  refresh();
+}
+
+// ── 資料面板 ───────────────────────────────────
+const dataEl=$("data");
+function renderData(p){
+  const compactStr = p.isBH
+      ? `R ≤ r<sub>s</sub>　已塌縮`
+      : `${sci(p.compact)} ×`;
+  const vescStr = p.isBH
+      ? `≥ c　<small>光無法逃逸</small>`
+      : `${sci(p.vesc)} <small>m/s</small><br><small>= ${sci(p.vescC)} c</small>`;
+  const dilStr = p.isBH
+      ? `→ ∞　<small>視界處</small>`
+      : `${sci(p.dilate,4)}<br><small>z = ${sci(p.z)}</small>`;
+  const cells=[
+    {k:`史瓦西半徑 <em>r_s</em>`, v:`${sci(p.rs)} <small>m</small>`, cls:"hl"},
+    {k:`緊緻度 <em>R/r_s</em>`,    v:compactStr, cls:p.isBH?"warm":"hl"},
+    {k:`表面逃逸速度 <em>v_esc</em>`, v:vescStr},
+    {k:`時間膨脹 <em>√(1−r_s/R)</em>`, v:dilStr},
+    {k:`平均密度 <em>ρ</em>`,        v:`${sci(p.density)} <small>kg/m³</small>`},
+    {k:`表面重力 <em>g</em>`,        v:`${sci(p.gsurf)} <small>m/s²</small>`},
+    {k:`光子球 <em>1.5 r_s</em>`,    v:`${sci(p.photon)} <small>m</small>`},
+    {k:`ISCO <em>3 r_s</em>`,        v:`${sci(p.isco)} <small>m</small>`},
+    {k:`霍金溫度 <em>T_H</em>${p.isBH?'':'<span class="tag">若塌縮成黑洞</span>'}`, v:`${sci(p.Thawk)} <small>K</small>`, cls:p.isBH?"hl":"dim"},
+    {k:`蒸發壽命 <em>τ</em>${p.isBH?'':'<span class="tag">若塌縮成黑洞</span>'}`, v:`${timeStr(p.tevap)}`, cls:p.isBH?"hl":"dim"},
+  ];
+  dataEl.innerHTML=cells.map(c=>`<div class="cell ${c.cls||''}"><div class="k">${c.k}</div><div class="v">${c.v}</div></div>`).join("");
+}
+
+// ── 預設 ───────────────────────────────────────
+const PRESETS=[
+  {n:"地球",      M:5.972e24, R:6.371e6},
+  {n:"太陽",      M:SUNM,     R:SUNR},
+  {n:"白矮星",    M:1.0e30,   R:6.0e6},
+  {n:"中子星",    M:2.8e30,   R:1.2e4},
+  {n:"恆星級黑洞", M:2.0e31,   R:1.0e3},
+  {n:"人馬座A*",  M:8.54e36,  R:1.0e4},
+  {n:"M87*",     M:1.29e40,  R:1.0e4},
+];
+$("presets").innerHTML=PRESETS.map((p,i)=>`<button type="button" class="preset" data-i="${i}">${p.n}</button>`).join("");
+$("presets").addEventListener("click",e=>{
+  const t=e.target.closest(".preset"); if(!t) return;
+  const p=PRESETS[+t.dataset.i];
+  state.logM=clamp(Math.log10(p.M),M_LO,M_HI);
+  state.logR=clamp(Math.log10(p.R),R_LO,R_HI);
+  syncFields(); refresh();
+  document.querySelectorAll(".cell").forEach(c=>{c.classList.remove("flash");void c.offsetWidth;c.classList.add("flash");});
+});
+
+// ── 主刷新（更新數據 + 動畫目標）─────────────────
+let cur=null;
+function refresh(){
+  const M=Math.pow(10,state.logM), R=Math.pow(10,state.logR);
+  cur=physics(M,R);
+  renderData(cur);
+  const b=$("badge"), bt=$("badgeText");
+  if(cur.isBH){ b.classList.add("bh"); bt.textContent="黑洞 · 事件視界已形成"; }
+  else        { b.classList.remove("bh"); bt.textContent= cur.compact<3 ? "極緻密天體 · 接近極限" : "恆星 / 一般天體"; }
+}
+
+// ════════════════════════════════════════════════
+//  CANVAS 視覺化
+// ════════════════════════════════════════════════
+const cv=$("cv"), ctx=cv.getContext("2d");
+let W=900,H=900;                 // 畫布尺寸（像素，CSS）
+function resize(){
+  const rect=cv.getBoundingClientRect();
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  W=Math.round(rect.width); H=W;
+  cv.width=W*dpr; cv.height=H*dpr; cv.style.height=W+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  Dmax=Math.min(W,H)*0.15;   // 視界最大顯示半徑（確保 ISCO=3r_s 仍在畫面內）
+}
+window.addEventListener("resize",resize);
+
+// 背景星場
+const STARS=[];
+for(let i=0;i<260;i++){
+  STARS.push({ x:Math.random()*2-1, y:Math.random()*2-1,
+    r:Math.random()*1.3+.3, tw:Math.random()*PI*2, ts:.6+Math.random()*1.6,
+    hue: Math.random()<.18 ? (Math.random()<.5?205:35) : 0 });
+}
+
+function smooth(a,b,t){return a+(b-a)*t;}
+function smoothstep(e0,e1,x){const t=clamp((x-e0)/(e1-e0),0,1);return t*t*(3-2*t);}
+
+let t0=performance.now();
+function frame(now){
+  const dt=Math.min((now-t0)/1000,.05); t0=now;
+  const k=1-Math.pow(0.0006,dt);
+  // 平滑趨近目標長度（log10 空間），R 與 r_s 各自獨立
+  const tgtLogR  = Math.log10(Math.max(cur?cur.R :1,1e-30));
+  const tgtLogRs = Math.log10(Math.max(cur?cur.rs:1,1e-30));
+  dispLogR  = smooth(dispLogR , tgtLogR , k);
+  dispLogRs = smooth(dispLogRs, tgtLogRs, k);
+  draw(now/1000);
+  requestAnimationFrame(frame);
+}
+
+function draw(time){
+  const cx=W/2, cy=H/2;
+  ctx.clearRect(0,0,W,H);
+
+  // —— 模式幾何（同一映射函數套用於 R 與 r_s）——
+  const starR  = mapLen(dispLogR);            // 物質體半徑（像素）= map(R)
+  const horR   = mapLen(dispLogRs);           // 史瓦西半徑（像素）= map(r_s) → 隨質量變化
+  const excess = dispLogRs - dispLogR;        // >0 表示 r_s 已超過 R（即黑洞），單位：數量級
+  const photonR= horR*1.5;                    // 光子球
+  const shadowR= horR*2.598;                  // 陰影／愛因斯坦環
+  const iscoR  = horR*3;                      // ISCO
+  warmGlow     = smoothstep(-0.04, 0.10, excess);   // 核心由恆星→純黑視界
+  const lens   = smoothstep(-0.02, 0.20, excess);   // 重力透鏡視覺強度
+  const diskA  = smoothstep( 0.04, 0.45, excess);   // 吸積盤淡入
+
+  // —— 背景：星雲底 ——
+  const bg=ctx.createRadialGradient(cx,cy*0.7,0,cx,cy,W*0.75);
+  bg.addColorStop(0,"rgba(22,28,54,0.55)");
+  bg.addColorStop(.5,"rgba(8,10,22,0.6)");
+  bg.addColorStop(1,"rgba(3,4,9,0.9)");
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+  // —— 星場（黑洞時做透鏡偏折）——
+  const thetaE = shadowR;                     // 以陰影半徑作為愛因斯坦環尺度
+  const driftX=(time*4)%(W*2), driftY=(time*1.5)%(H*2);
+  for(const s of STARS){
+    let px=cx + s.x*W*0.62;
+    let py=cy + s.y*H*0.62;
+    // 緩慢漂移
+    px += Math.sin(time*0.05 + s.tw)*3;
+    py += Math.cos(time*0.04 + s.tw)*3;
+    const tw=0.55+0.45*Math.sin(time*s.ts + s.tw);
+    let drawR=s.r, alpha=tw;
+
+    if(lens>0.01 && thetaE>1){
+      let dx=px-cx, dy=py-cy;
+      let beta=Math.hypot(dx,dy);             // 視為源位置 β
+      if(beta<0.5) beta=0.5;
+      const ang=Math.atan2(dy,dx);
+      // 點質量透鏡主像：θ+ = (β+√(β²+4θ_E²))/2 → 永遠在 θ_E 外，central 形成陰影
+      const thetaPlus=(beta+Math.sqrt(beta*beta+4*thetaE*thetaE))/2;
+      const rNew=smooth(beta,thetaPlus,lens);
+      px=cx+Math.cos(ang)*rNew;
+      py=cy+Math.sin(ang)*rNew;
+      // 近愛因斯坦環增亮（放大）
+      const near=1-smoothstep(0,thetaE*0.9,Math.abs(rNew-thetaE));
+      alpha=Math.min(1,alpha+near*0.9*lens);
+      drawR=s.r*(1+near*1.4*lens);
+    }
+    if(s.hue===205){ctx.fillStyle=`rgba(150,190,255,${alpha})`;}
+    else if(s.hue===35){ctx.fillStyle=`rgba(255,210,150,${alpha})`;}
+    else ctx.fillStyle=`rgba(235,240,255,${alpha})`;
+    ctx.beginPath(); ctx.arc(px,py,drawR,0,PI*2); ctx.fill();
+  }
+
+  // —— 吸積盤（後緣，黑洞時）——
+  if(diskA>0.01){
+    drawAccretion(cx,cy,horR,time,diskA,"back");
+  }
+
+  // —— 視界 / 恆星核心 ——
+  ctx.save();
+  if(warmGlow<0.5){
+    // 一般天體：發光球體
+    const t=warmGlow;                          // 接近黑洞時降溫變暗
+    const hot=1-smoothstep(0.0,0.5,t);
+    const halo=ctx.createRadialGradient(cx,cy,starR*0.2,cx,cy,starR*2.4);
+    halo.addColorStop(0,`rgba(255,${200-60*(1-hot)},${150*hot},${0.35*hot+0.05})`);
+    halo.addColorStop(.4,`rgba(255,160,80,${0.18*hot})`);
+    halo.addColorStop(1,"rgba(255,140,60,0)");
+    ctx.fillStyle=halo; ctx.beginPath(); ctx.arc(cx,cy,starR*2.4,0,PI*2); ctx.fill();
+
+    const body=ctx.createRadialGradient(cx-starR*0.3,cy-starR*0.3,starR*0.1,cx,cy,starR);
+    const baseC = mix([255,238,210],[255,120,40], 1-hot);   // 越緻密越偏紅
+    const edgeC = mix([255,150,70],[120,30,20], 1-hot);
+    body.addColorStop(0,`rgb(${baseC})`);
+    body.addColorStop(.7,`rgb(${edgeC})`);
+    body.addColorStop(1,`rgba(${edgeC.join(",")},0.85)`);
+    ctx.fillStyle=body; ctx.beginPath(); ctx.arc(cx,cy,starR,0,PI*2); ctx.fill();
+  } else {
+    // 黑洞：純黑視界
+    ctx.fillStyle="#000";
+    ctx.beginPath(); ctx.arc(cx,cy,horR,0,PI*2); ctx.fill();
+  }
+  ctx.restore();
+
+  // —— 史瓦西半徑虛線圈（一般天體時：壓到此處即成黑洞）——
+  if(warmGlow<0.95){
+    const a=(1-warmGlow)*0.9;
+    ctx.save();
+    ctx.setLineDash([5,6]); ctx.lineWidth=1.4;
+    ctx.strokeStyle=`rgba(255,120,90,${a})`;
+    ctx.beginPath(); ctx.arc(cx,cy,Math.max(horR,2.5),0,PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+    if(horR>14){
+      ctx.fillStyle=`rgba(255,150,120,${a})`;
+      ctx.font="11px 'IBM Plex Mono'";
+      ctx.fillText("r_s", cx+horR*0.7+4, cy-horR*0.7-4);
+    } else {
+      // 太小：用箭頭標記
+      ctx.fillStyle=`rgba(255,150,120,${a})`;
+      ctx.font="10px 'IBM Plex Mono'";
+      ctx.fillText("r_s ↗", cx+8, cy-6);
+    }
+    ctx.restore();
+  }
+
+  // —— 吸積盤（前緣）+ 光子環 + 標註（黑洞時）——
+  if(diskA>0.01){
+    drawAccretion(cx,cy,horR,time,diskA,"front");
+    // 光子環（陰影邊緣強亮）
+    ctx.save();
+    const ring=ctx.createRadialGradient(cx,cy,shadowR*0.96,cx,cy,shadowR*1.06);
+    ring.addColorStop(0,"rgba(255,200,120,0)");
+    ring.addColorStop(.5,`rgba(255,225,170,${0.95*diskA})`);
+    ring.addColorStop(1,"rgba(255,200,120,0)");
+    ctx.strokeStyle=ring; ctx.lineWidth=shadowR*0.10+2;
+    ctx.beginPath(); ctx.arc(cx,cy,shadowR,0,PI*2); ctx.stroke();
+    ctx.restore();
+
+    // 科學標註：光子球、ISCO、陰影
+    annotate(cx,cy,photonR,"1.5 r_s 光子球","rgba(120,200,255,",0.5*diskA);
+    annotate(cx,cy,iscoR ,"3 r_s ISCO","rgba(160,255,210,",0.45*diskA);
+
+    // 內部：天體本身半徑（已 ≤ r_s）
+    if(starR>4){
+      ctx.save(); ctx.setLineDash([3,4]); ctx.lineWidth=1;
+      ctx.strokeStyle=`rgba(180,190,220,${0.6*diskA})`;
+      ctx.beginPath(); ctx.arc(cx,cy,starR,0,PI*2); ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // —— 比例尺說明 ——
+  const note=$("scaleNote");
+  if(cur){
+    const html = cur.isBH
+      ? `視界 r<sub>s</sub> = ${sci(cur.rs)} m　·　天體 R = ${sci(cur.R)} m<br>R / r<sub>s</sub> = ${sci(cur.compact)}（已落入視界內）`
+      : `R = ${sci(cur.R)} m　·　r<sub>s</sub> = ${sci(cur.rs)} m<br>需再壓縮 ${sci(cur.compact)} 倍才成黑洞`;
+    if(html!==note._h){ note.innerHTML=html; note._h=html; }
+  }
+}
+
+function annotate(cx,cy,r,label,rgb,a){
+  if(a<0.02||r>W*0.5) return;
+  ctx.save();
+  ctx.setLineDash([2,7]); ctx.lineWidth=1;
+  ctx.strokeStyle=`${rgb}${a})`;
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle=`${rgb}${Math.min(1,a+0.2)})`;
+  ctx.font="10px 'IBM Plex Mono'";
+  const lx=cx+Math.cos(-PI/4)*r, ly=cy+Math.sin(-PI/4)*r;
+  ctx.fillText(label, lx+2, ly-2);
+  ctx.restore();
+}
+
+// 吸積盤：透視橢圓 + 都卜勒不對稱旋轉
+function drawAccretion(cx,cy,horR,time,alpha,layer){
+  const tilt=0.34;                       // 視角壓扁
+  const inner=horR*1.25, outer=horR*3.1;
+  ctx.save();
+  ctx.translate(cx,cy);
+  // layer back: 只畫上半（被視界遮住下半的後緣），front: 畫下半
+  const segs=120;
+  for(let i=0;i<segs;i++){
+    const ang=(i/segs)*PI*2 + time*0.6;
+    const isBack=Math.sin(ang)<0;
+    if(layer==="back" && !isBack) continue;
+    if(layer==="front" && isBack) continue;
+    const x=Math.cos(ang), y=Math.sin(ang)*tilt;
+    // 都卜勒：接近側（左）較亮
+    const beam=0.45+0.55*(0.5-0.5*Math.cos(ang+PI/2));
+    for(let r=inner;r<outer;r+= (outer-inner)/5){
+      const rr=r+ (i%3)*1.2;
+      const px=x*rr, py=y*rr - r*0.0;
+      const tnorm=(r-inner)/(outer-inner);
+      const heat=1-tnorm;
+      const col=mix([255,245,210],[255,90,30],tnorm);
+      const a=alpha*beam*(0.5+0.5*heat)*(0.5+0.5*Math.random()*0+0.5);
+      ctx.fillStyle=`rgba(${col[0]|0},${col[1]|0},${col[2]|0},${a*0.5})`;
+      const sz=1.4+heat*1.6;
+      ctx.beginPath(); ctx.arc(px,py,sz,0,PI*2); ctx.fill();
+    }
+  }
+  // 被重力彎折翻到頂部的「光弧」（front 時疊一道亮弧）
+  if(layer==="front"){
+    ctx.globalCompositeOperation="lighter";
+    const arc=ctx.createLinearGradient(0,-outer,0,-inner);
+    arc.addColorStop(0,`rgba(255,200,140,0)`);
+    arc.addColorStop(1,`rgba(255,160,90,${0.5*alpha})`);
+    ctx.strokeStyle=arc; ctx.lineWidth=horR*0.5;
+    ctx.beginPath(); ctx.arc(0,0,horR*1.7,PI*1.12,PI*1.88); ctx.stroke();
+    ctx.globalCompositeOperation="source-over";
+  }
+  ctx.restore();
+}
+
+function mix(a,b,t){t=clamp(t,0,1);return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];}
+
+// ── 事件繫結 ───────────────────────────────────
+massSld.addEventListener("input",setFromSliders);
+radSld .addEventListener("input",setFromSliders);
+massNum.addEventListener("change",()=>setFromField("m"));
+radNum .addEventListener("change",()=>setFromField("r"));
+massNum.addEventListener("keydown",e=>{if(e.key==="Enter")setFromField("m");});
+radNum .addEventListener("keydown",e=>{if(e.key==="Enter")setFromField("r");});
+
+// 滑桿刻度：依實際位置定位（對數滑桿的各標示點不是等距）
+document.querySelectorAll(".ticks.pos").forEach(t=>{
+  const lo=+t.dataset.lo, hi=+t.dataset.hi;
+  t.innerHTML=t.dataset.v.split(",").map(v=>`<span style="left:${(v-lo)/(hi-lo)*100}%">10${sup(v)}</span>`).join("");
+});
+
+// ── 啟動 ───────────────────────────────────────
+resize();
+refresh();
+dispLogR  = Math.log10(Math.max(cur.R ,1e-30));
+dispLogRs = Math.log10(Math.max(cur.rs,1e-30));
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

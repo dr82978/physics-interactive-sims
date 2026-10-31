@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>3D 靜電場觀測儀 · Electrostatic Field Viewer</title>
+<style>
+  :root{
+    --bg:#070a14; --panel:rgba(14,19,33,.82); --panel-edge:#1d2741;
+    --ink:#dfe6f5; --ink-dim:#8a97b8; --ink-faint:#5a6a92; --accent:#5fd0ff;
+    --accent2:#ffd166; --rule:#222d49; --mono:"SFMono-Regular",ui-monospace,"Cascadia Code",Menlo,Consolas,monospace;
+    --sans:"Inter",system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;overflow:hidden}
+  #stage{position:fixed;inset:0}
+  canvas{display:block}
+
+  /* ── 控制面板 ───────────────────────────── */
+  #panel{position:fixed;top:0;left:0;height:100%;width:312px;background:var(--panel);
+    backdrop-filter:blur(14px);border-right:1px solid var(--panel-edge);
+    padding:18px 18px 24px;overflow-y:auto;z-index:10;transition:transform .28s ease}
+  #panel::-webkit-scrollbar{width:8px}
+  #panel::-webkit-scrollbar-thumb{background:#1f2a47;border-radius:8px}
+
+  .brand{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+  .brand h1{font-size:15px;font-weight:650;letter-spacing:.2px;margin:0}
+  .brand .en{font-family:var(--mono);font-size:10px;color:var(--ink-dim);letter-spacing:.5px}
+  .sub{font-size:11px;color:var(--ink-dim);margin:0 0 16px;line-height:1.5}
+
+  .group{margin-bottom:16px}
+  .glabel{font-family:var(--mono);font-size:10px;letter-spacing:1.4px;text-transform:uppercase;
+    color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:7px}
+  .glabel::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--rule),transparent)}
+
+  .shape-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .chip{appearance:none;border:1px solid var(--panel-edge);background:#0d1424;color:var(--ink-dim);
+    border-radius:9px;padding:9px 8px;font-size:11.5px;font-family:var(--sans);cursor:pointer;
+    text-align:left;line-height:1.25;transition:.14s;display:flex;flex-direction:column;gap:2px}
+  .chip .k{font-family:var(--mono);font-size:9px;color:var(--ink-faint);letter-spacing:.5px}
+  .chip:hover{border-color:#33507e;color:var(--ink)}
+  .chip.on{border-color:var(--accent);background:rgba(95,208,255,.12);color:#eaf6ff;
+    box-shadow:0 0 0 1px rgba(95,208,255,.25) inset}
+
+  .seg{display:flex;border:1px solid var(--panel-edge);border-radius:9px;overflow:hidden}
+  .seg button{flex:1;appearance:none;border:0;background:#0d1424;color:var(--ink-dim);
+    padding:9px 6px;font-size:12px;cursor:pointer;font-family:var(--sans);transition:.14s}
+  .seg button+button{border-left:1px solid var(--panel-edge)}
+  .seg button.on{background:rgba(95,208,255,.14);color:#eaf6ff}
+
+  .rowlabel{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-dim);margin-bottom:6px}
+  .rowlabel b{font-family:var(--mono);color:var(--accent2);font-weight:500}
+  input[type=range]{width:100%;-webkit-appearance:none;height:4px;border-radius:4px;
+    background:#1c2640;outline:none;margin:2px 0}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;
+    background:var(--accent);cursor:pointer;border:2px solid #0a1020;box-shadow:0 0 6px rgba(95,208,255,.6)}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--accent);
+    border:2px solid #0a1020;cursor:pointer}
+
+  /* 色標 legend */
+  .legend{margin-top:4px}
+  .bar{height:11px;border-radius:6px;border:1px solid var(--panel-edge);
+    background:linear-gradient(90deg,hsl(240 90% 50%),hsl(180 90% 48%),hsl(120 80% 45%),hsl(60 90% 50%),hsl(0 90% 52%))}
+  .barticks{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;
+    color:var(--ink-dim);margin-top:3px}
+
+  .note{font-size:10.5px;line-height:1.55;color:var(--ink-dim);background:#0b1120;
+    border:1px solid var(--panel-edge);border-radius:9px;padding:10px 11px}
+  .note b{color:var(--ink)}
+  .note .ref{font-family:var(--mono);color:var(--accent2)}
+
+  .miniact{width:100%;appearance:none;border:1px solid var(--panel-edge);background:#0d1424;
+    color:var(--ink-dim);border-radius:9px;padding:9px;font-size:11.5px;cursor:pointer;transition:.14s}
+  .miniact:hover{border-color:#33507e;color:var(--ink)}
+
+  .hidden{display:none !important}
+
+  /* 計算中遮罩 */
+  #busy{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    flex-direction:column;gap:14px;background:rgba(5,8,16,.55);backdrop-filter:blur(2px);z-index:20;
+    opacity:0;pointer-events:none;transition:opacity .2s}
+  #busy.show{opacity:1}
+  .spinner{width:42px;height:42px;border-radius:50%;border:3px solid #1c2640;
+    border-top-color:var(--accent);animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #busytxt{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:1px}
+  .progwrap{width:200px;height:4px;background:#1c2640;border-radius:4px;overflow:hidden}
+  .progbar{height:100%;width:0;background:var(--accent);transition:width .12s}
+
+  /* 右下角讀數 */
+  #hud{position:fixed;right:14px;bottom:14px;z-index:9;font-family:var(--mono);font-size:10.5px;
+    color:var(--ink-dim);text-align:right;line-height:1.7;pointer-events:none;
+    text-shadow:0 1px 4px #000}
+  #hud b{color:var(--ink)}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* 行動裝置面板開關 */
+  #toggle{position:fixed;top:12px;left:12px;z-index:30;display:none;appearance:none;
+    border:1px solid var(--panel-edge);background:var(--panel);color:var(--ink);
+    border-radius:9px;padding:9px 12px;font-size:13px;cursor:pointer;backdrop-filter:blur(10px)}
+  @media (max-width:760px){
+    #panel{transform:translateX(-100%);width:86%;max-width:340px}
+    #panel.open{transform:none;box-shadow:0 0 40px rgba(0,0,0,.6)}
+    #toggle{display:block}
+    #hud{bottom:auto;top:12px;right:12px}
+  }
+</style>
+</head>
+<body>
+  <div id="stage"></div>
+
+  <button id="toggle">☰ 控制</button>
+
+  <aside id="panel">
+    <div class="brand"><h1>靜電場觀測儀</h1><span class="en">EFIELD·3D</span></div>
+    <p class="sub">均勻外場 <b style="color:var(--ink)">E₀</b> 朝下 (−z)。放入物體後以有限差分法求解電位,描繪連續流線並以顏色標示場強 |E|。</p>
+
+    <div class="group">
+      <div class="glabel">物體形狀 · Geometry</div>
+      <div class="shape-grid" id="shapes"></div>
+    </div>
+
+    <div class="group">
+      <div class="glabel">材質 · Material</div>
+      <div class="seg" id="material">
+        <button data-v="conductor" class="on">良導體</button>
+        <button data-v="dielectric">介電質</button>
+      </div>
+    </div>
+
+    <div class="group" id="epsrGroup">
+      <div class="rowlabel">相對介電常數 εᵣ <b id="epsrVal">4.0</b></div>
+      <input type="range" id="epsr" min="1.5" max="12" step="0.5" value="4">
+    </div>
+
+    <div class="group hidden" id="orientGroup">
+      <div class="glabel">圓柱軸向 · Axis</div>
+      <div class="seg" id="orient">
+        <button data-v="perp" class="on">⊥ 場 (橫置)</button>
+        <button data-v="para">∥ 場 (直立)</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="glabel">流線密度 · Density</div>
+      <div class="seg" id="density">
+        <button data-v="vlow">極疏</button>
+        <button data-v="low">疏</button>
+        <button data-v="med" class="on">中</button>
+        <button data-v="high">密</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="glabel">解析度 · Grid</div>
+      <div class="seg" id="quality">
+        <button data-v="fast">快速 40³</button>
+        <button data-v="fine" class="on">精細 56³</button>
+      </div>
+    </div>
+
+    <div class="group legend">
+      <div class="glabel">場強色標 · |E| / E₀</div>
+      <div class="bar"></div>
+      <div class="barticks"><span>0</span><span>1</span><span>2</span><span>≥3</span></div>
+    </div>
+
+    <div class="group">
+      <div class="note" id="theory"></div>
+    </div>
+
+    <button class="miniact" id="reset">↺ 重置視角</button>
+  </aside>
+
+  <div id="busy">
+    <div class="spinner"></div>
+    <div id="busytxt">求解電位場中…</div>
+    <div class="progwrap"><div class="progbar" id="prog"></div></div>
+  </div>
+
+  <div id="hud"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ============================================================
+   3D 靜電場觀測儀
+   物理：在均勻外場 E₀(−ẑ) 中放入導體/介電質物體，
+   以有限差分 (FDM) 解 ∇·(ε∇φ)=0。
+   - 導體：對稱中心物體 ⇒ 電位為 0 (Dirichlet)。
+   - 介電質：可變 ε，面用調和平均 (法向 D 連續)。
+   - 外邊界：φ = E₀·z (遠場近似)。
+   求解後 E = −∇φ，以 RK4 沿單位場積分流線，顏色映射 |E|。
+   ============================================================ */
+'use strict';
+
+// ── 全域狀態 ──────────────────────────────
+const STATE = {
+  shape:'solid_sphere', material:'conductor', epsr:4.0,
+  orient:'perp', density:'med', quality:'fine'
+};
+
+const SHAPES = [
+  {id:'solid_sphere',    name:'實心球',     k:'SPHERE'},
+  {id:'solid_cylinder',  name:'實心圓柱體', k:'CYLINDER'},
+  {id:'solid_cube',      name:'實心正方體', k:'CUBE'},
+  {id:'hollow_sphere',   name:'空心單球',   k:'SHELL·SP'},
+  {id:'double_sphere',   name:'內外雙球體', k:'2×SHELL'},
+  {id:'hollow_cylinder', name:'空心單圓柱', k:'TUBE'},
+  {id:'double_cylinder', name:'空心雙圓柱', k:'2×TUBE'},
+  {id:'hollow_cube',     name:'空心正方體', k:'BOX·SHELL'},
+];
+const isCyl = s => s==='solid_cylinder'||s==='hollow_cylinder'||s==='double_cylinder';
+
+const L = 1.0;                 // 半域寬，域 = [-L,L]^3
+let   N = 56;                  // 每軸格點數
+let   N2 = N*N;
+const E0 = 1.0;                // 外場強度（內部單位）
+
+// 場陣列
+let phi, epsr, fixed, Ex, Ey, Ez, Emag;
+function allocate(){
+  N2 = N*N; const n3 = N*N*N;
+  phi  = new Float32Array(n3);
+  epsr = new Float32Array(n3);
+  fixed= new Uint8Array(n3);
+  Ex = new Float32Array(n3); Ey = new Float32Array(n3);
+  Ez = new Float32Array(n3); Emag = new Float32Array(n3);
+}
+const coord = i => -L + 2*L*i/(N-1);          // 格 index → 座標
+const h = () => 2*L/(N-1);
+
+// ── 幾何：判定點 (x,y,z) 是否落在「物體材質」內 ──
+// 回傳 true 表示該處是物體實體（導體或介電質佔據）。
+function inMaterial(x,y,z){
+  const s = STATE.shape;
+  // 圓柱軸向：perp ⇒ 軸沿 x；para ⇒ 軸沿 z
+  const cylRho = () => STATE.orient==='perp' ? Math.hypot(y,z) : Math.hypot(x,y);
+  const cylAx  = () => STATE.orient==='perp' ? Math.abs(x)      : Math.abs(z);
+  switch(s){
+    case 'solid_sphere':   return (x*x+y*y+z*z) <= 0.40*0.40;
+    case 'solid_cube':     return Math.max(Math.abs(x),Math.abs(y),Math.abs(z)) <= 0.36;
+    case 'solid_cylinder': return cylRho()<=0.32 && cylAx()<=0.35;
+    case 'hollow_sphere':{ const r=Math.sqrt(x*x+y*y+z*z); return r>=0.33 && r<=0.45; }
+    case 'double_sphere':{ const r=Math.sqrt(x*x+y*y+z*z);
+        return (r>=0.40&&r<=0.47)||(r>=0.18&&r<=0.27); }
+    case 'hollow_cube':{ const m=Math.max(Math.abs(x),Math.abs(y),Math.abs(z));
+        return m<=0.42 && m>=0.30; }
+    case 'hollow_cylinder':{ const rho=cylRho(); return cylAx()<=0.35 && rho>=0.28 && rho<=0.38; }
+    case 'double_cylinder':{ const rho=cylRho(); if(cylAx()>0.35) return false;
+        return (rho>=0.34&&rho<=0.42)||(rho>=0.16&&rho<=0.24); }
+  }
+  return false;
+}
+const isConductorPt = (x,y,z) => STATE.material==='conductor' && inMaterial(x,y,z);
+
+// ── 建立格點分類 ──────────────────────────
+function classify(){
+  const eps = STATE.epsr;
+  const cond = STATE.material==='conductor';
+  for(let k=0;k<N;k++){ const z=coord(k);
+    for(let j=0;j<N;j++){ const y=coord(j);
+      for(let i=0;i<N;i++){ const x=coord(i);
+        const id=i+N*(j+N*k);
+        // 預設：自由空間，初始猜值 = 外場電位 φ=E0·z
+        epsr[id]=1; fixed[id]=0; phi[id]=E0*z;
+        // 外邊界 → Dirichlet 遠場
+        if(i===0||i===N-1||j===0||j===N-1||k===0||k===N-1){ fixed[id]=1; continue; }
+        if(inMaterial(x,y,z)){
+          if(cond){ fixed[id]=1; phi[id]=0; }   // 導體：等位面 φ=0
+          else    { epsr[id]=eps; }             // 介電質
+        }
+      }}}
+}
+
+// ── SOR 迭代（一次掃描，回傳最大更新量）────
+const OMEGA = 1.9;
+function sweep(){
+  let maxd=0;
+  for(let k=1;k<N-1;k++){
+    for(let j=1;j<N-1;j++){
+      let id = 1 + N*(j + N*k);
+      for(let i=1;i<N-1;i++, id++){
+        if(fixed[id]) continue;
+        const e0=epsr[id];
+        // 面調和平均 ε（自由空間時皆為 1）
+        const exm=2*e0*epsr[id-1]/(e0+epsr[id-1]);
+        const exp=2*e0*epsr[id+1]/(e0+epsr[id+1]);
+        const eym=2*e0*epsr[id-N]/(e0+epsr[id-N]);
+        const eyp=2*e0*epsr[id+N]/(e0+epsr[id+N]);
+        const ezm=2*e0*epsr[id-N2]/(e0+epsr[id-N2]);
+        const ezp=2*e0*epsr[id+N2]/(e0+epsr[id+N2]);
+        const den=exm+exp+eym+eyp+ezm+ezp;
+        const num=exm*phi[id-1]+exp*phi[id+1]
+                 +eym*phi[id-N]+eyp*phi[id+N]
+                 +ezm*phi[id-N2]+ezp*phi[id+N2];
+        const nv=num/den;
+        const d=OMEGA*(nv-phi[id]);
+        phi[id]+=d;
+        const ad=d<0?-d:d; if(ad>maxd) maxd=ad;
+      }
+    }
+  }
+  return maxd;
+}
+
+// ── 由 φ 算 E = −∇φ ──────────────────────
+function computeField(){
+  const inv=1/(2*h());
+  for(let k=1;k<N-1;k++)
+  for(let j=1;j<N-1;j++)
+  for(let i=1;i<N-1;i++){
+    const id=i+N*(j+N*k);
+    const ex=-(phi[id+1]-phi[id-1])*inv;
+    const ey=-(phi[id+N]-phi[id-N])*inv;
+    const ez=-(phi[id+N2]-phi[id-N2])*inv;
+    Ex[id]=ex; Ey[id]=ey; Ez[id]=ez;
+    Emag[id]=Math.sqrt(ex*ex+ey*ey+ez*ez);
+  }
+}
+
+// ── 三線性插值取 E（out 寫入 [ex,ey,ez]）────
+function sampleE(x,y,z,out){
+  let gx=(x+L)/(2*L)*(N-1), gy=(y+L)/(2*L)*(N-1), gz=(z+L)/(2*L)*(N-1);
+  if(gx<1)gx=1; if(gx>N-2.001)gx=N-2.001;
+  if(gy<1)gy=1; if(gy>N-2.001)gy=N-2.001;
+  if(gz<1)gz=1; if(gz>N-2.001)gz=N-2.001;
+  const i=gx|0,j=gy|0,k=gz|0, fx=gx-i,fy=gy-j,fz=gz-k;
+  const b=i+N*(j+N*k);
+  const c000=b,c100=b+1,c010=b+N,c110=b+N+1,
+        c001=b+N2,c101=b+N2+1,c011=b+N2+N,c111=b+N2+N+1;
+  const w000=(1-fx)*(1-fy)*(1-fz),w100=fx*(1-fy)*(1-fz),
+        w010=(1-fx)*fy*(1-fz),    w110=fx*fy*(1-fz),
+        w001=(1-fx)*(1-fy)*fz,    w101=fx*(1-fy)*fz,
+        w011=(1-fx)*fy*fz,        w111=fx*fy*fz;
+  out[0]=Ex[c000]*w000+Ex[c100]*w100+Ex[c010]*w010+Ex[c110]*w110+Ex[c001]*w001+Ex[c101]*w101+Ex[c011]*w011+Ex[c111]*w111;
+  out[1]=Ey[c000]*w000+Ey[c100]*w100+Ey[c010]*w010+Ey[c110]*w110+Ey[c001]*w001+Ey[c101]*w101+Ey[c011]*w011+Ey[c111]*w111;
+  out[2]=Ez[c000]*w000+Ez[c100]*w100+Ez[c010]*w010+Ez[c110]*w110+Ez[c001]*w001+Ez[c101]*w101+Ez[c011]*w011+Ez[c111]*w111;
+  return out;
+}
+
+// ── 流線積分（沿單位場，RK4）──────────────
+const _t=[0,0,0];
+function unitField(x,y,z,sign,out){
+  sampleE(x,y,z,_t);
+  let m=Math.hypot(_t[0],_t[1],_t[2]); if(m<1e-9)m=1e-9;
+  out[0]=sign*_t[0]/m; out[1]=sign*_t[1]/m; out[2]=sign*_t[2]/m; return m;
+}
+function trace(px,py,pz,sign){
+  const ds=0.55*h(), maxStep=Math.ceil(7*N);
+  const pts=[], mags=[];
+  let x=px,y=py,z=pz;
+  let reachedTop=false, hitCond=false;
+  const k1=[0,0,0],k2=[0,0,0],k3=[0,0,0],k4=[0,0,0];
+  for(let s=0;s<maxStep;s++){
+    const m=unitField(x,y,z,sign,k1);
+    pts.push(x,y,z); mags.push(m);
+    unitField(x+0.5*ds*k1[0],y+0.5*ds*k1[1],z+0.5*ds*k1[2],sign,k2);
+    unitField(x+0.5*ds*k2[0],y+0.5*ds*k2[1],z+0.5*ds*k2[2],sign,k3);
+    unitField(x+ds*k3[0],    y+ds*k3[1],    z+ds*k3[2],    sign,k4);
+    const nx=x+ds/6*(k1[0]+2*k2[0]+2*k3[0]+k4[0]);
+    const ny=y+ds/6*(k1[1]+2*k2[1]+2*k3[1]+k4[1]);
+    const nz=z+ds/6*(k1[2]+2*k2[2]+2*k3[2]+k4[2]);
+    // 終止條件
+    if(Math.abs(nx)>=L*0.985||Math.abs(ny)>=L*0.985||Math.abs(nz)>=L*0.985){
+      if(nz>=L*0.985) reachedTop=true;
+      pts.push(nx,ny,nz); mags.push(m); break;
+    }
+    if(isConductorPt(nx,ny,nz)){ pts.push(nx,ny,nz); mags.push(m); hitCond=true; break; }
+    x=nx;y=ny;z=nz;
+  }
+  return {pts,mags,reachedTop,hitCond};
+}
+
+// ── 色標：|E|/E0 → 顏色（藍→青→綠→黃→紅）─
+const _col=new THREE.Color();
+function magColor(m){
+  let t=m/(3*E0); if(t<0)t=0; if(t>1)t=1;
+  _col.setHSL((1-t)*0.666, 0.92, 0.52); return _col;
+}
+
+// =====================  THREE.js  =====================
+const stage=document.getElementById('stage');
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+stage.appendChild(renderer.domElement);
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x070a14);
+scene.fog=new THREE.FogExp2(0x070a14,0.085);
+
+const camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,0.05,100);
+camera.up.set(0,0,1);
+
+scene.add(new THREE.AmbientLight(0x8fa0c8,1.0));
+const dl=new THREE.DirectionalLight(0xffffff,0.55); dl.position.set(3,4,5); scene.add(dl);
+const dl2=new THREE.DirectionalLight(0x88aaff,0.3); dl2.position.set(-4,-2,-3); scene.add(dl2);
+
+// 域邊界框
+const boxEdges=new THREE.LineSegments(
+  new THREE.EdgesGeometry(new THREE.BoxGeometry(2*L,2*L,2*L)),
+  new THREE.LineBasicMaterial({color:0x24314f}));
+scene.add(boxEdges);
+
+// 外場方向指示（頂部數支向下小箭頭）
+const fieldHint=new THREE.Group(); scene.add(fieldHint);
+(function(){
+  const down=new THREE.Vector3(0,0,-1);
+  for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){
+    if(a===0&&b===0) continue;
+    const ah=new THREE.ArrowHelper(down, new THREE.Vector3(a*0.7,b*0.7,1.25),
+      0.42, 0x46608f, 0.10, 0.05);
+    fieldHint.add(ah);
+  }
+})();
+
+// 可重建的群組
+let lineMesh=null, arrowMesh=null;
+const objGroup=new THREE.Group(); scene.add(objGroup);
+
+// ── 重建物體網格 ─────────────────────────
+function buildObject(){
+  while(objGroup.children.length) objGroup.remove(objGroup.children[0]);
+  const cond=STATE.material==='conductor';
+  const fillCol = cond?0xb4c2da:0x6f9bff;
+  const wireCol = cond?0xe2ecff:0xb6d2ff;
+  const fillOpa = cond?0.36:0.22;
+  const fill=()=> new THREE.MeshStandardMaterial({color:fillCol,
+      metalness:cond?0.5:0.0, roughness:cond?0.35:0.5,
+      emissive:fillCol, emissiveIntensity:cond?0.05:0.10,
+      transparent:true, opacity:fillOpa, depthWrite:false});
+  const rot=(me,r)=>{ if(r==='x')me.rotation.x=Math.PI/2; if(r==='z')me.rotation.z=Math.PI/2; return me; };
+  // 填充面 + 線框（強化邊界辨識）
+  function surf(geo,wireGeo,r){
+    const me=rot(new THREE.Mesh(geo,fill()),r); me.renderOrder=1; objGroup.add(me);
+    const w=rot(new THREE.Mesh(wireGeo||geo,new THREE.MeshBasicMaterial({
+      color:wireCol,wireframe:true,transparent:true,opacity:cond?0.5:0.4,depthWrite:false})),r);
+    w.renderOrder=2; objGroup.add(w); return me;
+  }
+  const sphere=r=>surf(new THREE.SphereGeometry(r,40,28),new THREE.SphereGeometry(r,18,12));
+  const rotForCyl = STATE.orient==='perp' ? 'z' : 'x';   // CylinderGeometry 軸沿 y → x 或 z
+  const cyl=(r,len)=>surf(new THREE.CylinderGeometry(r,r,len,40,1,true),
+                          new THREE.CylinderGeometry(r,r,len,16,1,true),rotForCyl);
+  const cube=a=>{
+    const me=rot(new THREE.Mesh(new THREE.BoxGeometry(2*a,2*a,2*a),fill())); me.renderOrder=1; objGroup.add(me);
+    const e=new THREE.LineSegments(new THREE.EdgesGeometry(me.geometry),
+      new THREE.LineBasicMaterial({color:wireCol,transparent:true,opacity:0.8,depthWrite:false}));
+    e.renderOrder=2; objGroup.add(e); return me;
+  };
+
+  switch(STATE.shape){
+    case 'solid_sphere':   sphere(0.40); break;
+    case 'solid_cube':     cube(0.36); break;
+    case 'solid_cylinder': cyl(0.32,0.70); break;
+    case 'hollow_sphere':  sphere(0.45); sphere(0.33); break;
+    case 'double_sphere':  sphere(0.47); sphere(0.40); sphere(0.27); sphere(0.18); break;
+    case 'hollow_cube':    cube(0.42); cube(0.30); break;
+    case 'hollow_cylinder':cyl(0.38,0.70); cyl(0.28,0.70); break;
+    case 'double_cylinder':cyl(0.42,0.70); cyl(0.34,0.70); cyl(0.24,0.70); cyl(0.16,0.70); break;
+  }
+}
+
+// ── 重建流線 + 箭頭 ──────────────────────
+function densityCount(){ return {vlow:9,low:13,med:18,high:24}[STATE.density]; }
+
+function buildStreamlines(){
+  if(lineMesh){ scene.remove(lineMesh); lineMesh.geometry.dispose(); lineMesh.material.dispose(); lineMesh=null; }
+  if(arrowMesh){ scene.remove(arrowMesh); arrowMesh.geometry.dispose(); arrowMesh.material.dispose(); arrowMesh=null; }
+
+  const cnt=densityCount();
+  const span=L*0.88, step=(2*span)/(cnt-1);
+  const lines=[];   // 每條：{pos:[..xyz..], mag:[..]}
+  const top=L*0.975, bot=-L*0.975;
+
+  // 頂面種子：順流（沿 +E，向下）
+  for(let a=0;a<cnt;a++)for(let b=0;b<cnt;b++){
+    const sx=-span+a*step, sy=-span+b*step;
+    if(isConductorPt(sx,sy,top)) continue;
+    const r=trace(sx,sy,top,+1);
+    if(r.pts.length>=6) lines.push(r);
+  }
+  // 底面種子：逆流（沿 −E，向上）；僅保留終止於導體者（避免與穿透線重複）
+  if(STATE.material==='conductor'){
+    for(let a=0;a<cnt;a++)for(let b=0;b<cnt;b++){
+      const sx=-span+a*step, sy=-span+b*step;
+      if(isConductorPt(sx,sy,bot)) continue;
+      const r=trace(sx,sy,bot,-1);
+      if(r.reachedTop || r.pts.length<6) continue; // 穿透線：已由頂面畫出
+      // 反轉成順流序（導體面 → 底面）
+      const n=r.mags.length, pos=new Float32Array(r.pts.length), mg=new Float32Array(n);
+      for(let q=0;q<n;q++){ const src=(n-1-q)*3, dst=q*3;
+        pos[dst]=r.pts[src];pos[dst+1]=r.pts[src+1];pos[dst+2]=r.pts[src+2]; mg[q]=r.mags[n-1-q]; }
+      lines.push({pts:pos,mags:mg});
+    }
+  }
+
+  // 組裝 LineSegments（單一 draw call）
+  let segCount=0;
+  for(const ln of lines) segCount += (ln.mags.length-1);
+  const positions=new Float32Array(segCount*2*3);
+  const colors=new Float32Array(segCount*2*3);
+  let p=0,c=0;
+  const arrowMat=[], arrowPos=[], arrowDir=[], arrowMag=[];
+  for(const ln of lines){
+    const n=ln.mags.length;
+    for(let q=0;q<n-1;q++){
+      const i0=q*3,i1=(q+1)*3;
+      positions[p++]=ln.pts[i0];positions[p++]=ln.pts[i0+1];positions[p++]=ln.pts[i0+2];
+      positions[p++]=ln.pts[i1];positions[p++]=ln.pts[i1+1];positions[p++]=ln.pts[i1+2];
+      const ca=magColor(ln.mags[q]);   colors[c++]=ca.r;colors[c++]=ca.g;colors[c++]=ca.b;
+      const cb=magColor(ln.mags[q+1]); colors[c++]=cb.r;colors[c++]=cb.g;colors[c++]=cb.b;
+    }
+    // 下游端箭頭
+    const e=(n-1)*3;
+    const ex=ln.pts[e],ey=ln.pts[e+1],ez=ln.pts[e+2];
+    sampleE(ex,ey,ez,_t);
+    let mm=Math.hypot(_t[0],_t[1],_t[2]); if(mm<1e-9)mm=1e-9;
+    arrowPos.push(ex,ey,ez);
+    arrowDir.push(_t[0]/mm,_t[1]/mm,_t[2]/mm);
+    arrowMag.push(ln.mags[n-1]);
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+  lineMesh=new THREE.LineSegments(geo,new THREE.LineBasicMaterial({
+    vertexColors:true,transparent:true,opacity:0.92}));
+  scene.add(lineMesh);
+
+  // 箭頭（InstancedMesh 圓錐）
+  const na=arrowMag.length;
+  const cone=new THREE.ConeGeometry(0.016,0.05,10);
+  const amat=new THREE.MeshBasicMaterial({});
+  arrowMesh=new THREE.InstancedMesh(cone,amat,na);
+  const up=new THREE.Vector3(0,1,0), dir=new THREE.Vector3(), pos=new THREE.Vector3(),
+        quat=new THREE.Quaternion(), scl=new THREE.Vector3(1,1,1), mtx=new THREE.Matrix4();
+  for(let q=0;q<na;q++){
+    dir.set(arrowDir[q*3],arrowDir[q*3+1],arrowDir[q*3+2]).normalize();
+    quat.setFromUnitVectors(up,dir);
+    pos.set(arrowPos[q*3]-dir.x*0.025, arrowPos[q*3+1]-dir.y*0.025, arrowPos[q*3+2]-dir.z*0.025);
+    mtx.compose(pos,quat,scl); arrowMesh.setMatrixAt(q,mtx);
+    arrowMesh.setColorAt(q, magColor(arrowMag[q]));
+  }
+  arrowMesh.instanceMatrix.needsUpdate=true;
+  if(arrowMesh.instanceColor) arrowMesh.instanceColor.needsUpdate=true;
+  scene.add(arrowMesh);
+
+  const fs=fieldStats();
+  document.getElementById('hud').innerHTML =
+    `流線 <b>${lines.length}</b> 條 · 格點 <b>${N}³</b><br>`+
+    `${currentShapeName()} · ${STATE.material==='conductor'?'良導體':'介電質 εᵣ='+STATE.epsr.toFixed(1)}<br>`+
+    `數值解：中心 |E|/E₀ = <b>${fs.center.toFixed(3)}</b> · 最大 <b>${fs.max.toFixed(2)}</b>`;
+}
+
+// 數值驗證：物體中心 |E|/E₀ 與全域最大 |E|/E₀（排除 Dirichlet 邊界與導體內部）
+function fieldStats(){
+  const c=N>>1; let sum=0,cnt=0;
+  for(let dk=-1;dk<=0;dk++)for(let dj=-1;dj<=0;dj++)for(let di=-1;di<=0;di++){
+    sum+=Emag[(c+di)+N*((c+dj)+N*(c+dk))]; cnt++; }
+  let mx=0;
+  for(let k=2;k<N-2;k++)for(let j=2;j<N-2;j++)for(let i=2;i<N-2;i++){
+    const id=i+N*(j+N*k); if(fixed[id]) continue; if(Emag[id]>mx) mx=Emag[id]; }
+  return {center:sum/cnt/E0, max:mx/E0};
+}
+
+function currentShapeName(){ return (SHAPES.find(s=>s.id===STATE.shape)||{}).name||''; }
+
+// =====================  求解流程  =====================
+const busy=document.getElementById('busy'), prog=document.getElementById('prog');
+let solving=false, iter=0, maxIter=700;
+const TOL=2e-4;
+
+function startSolve(){
+  classify();
+  iter=0; solving=true;
+  busy.classList.add('show');
+}
+function stepSolve(){
+  if(!solving) return;
+  const perFrame=8;
+  let done=false;
+  for(let s=0;s<perFrame;s++){
+    const d=sweep(); iter++;
+    if(d<TOL || iter>=maxIter){ done=true; break; }
+  }
+  prog.style.width=Math.min(100, iter/maxIter*100)+'%';
+  if(done){
+    solving=false;
+    computeField();
+    buildObject();
+    buildStreamlines();
+    busy.classList.remove('show');
+  }
+}
+
+// 只重畫流線（密度變更時，場已解出）
+function restreamOnly(){ if(solving) return; buildStreamlines(); }
+
+// =====================  自製軌道控制  =====================
+const cam={azim:0.65, polar:1.12, r:3.4, tx:0,ty:0,tz:0};
+function applyCam(){
+  const sp=Math.sin(cam.polar), cp=Math.cos(cam.polar);
+  camera.position.set(
+    cam.tx + cam.r*sp*Math.cos(cam.azim),
+    cam.ty + cam.r*sp*Math.sin(cam.azim),
+    cam.tz + cam.r*cp);
+  camera.lookAt(cam.tx,cam.ty,cam.tz);
+}
+let drag=false, px=0, py=0;
+renderer.domElement.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY;
+  renderer.domElement.setPointerCapture(e.pointerId);});
+renderer.domElement.addEventListener('pointermove',e=>{
+  if(!drag)return; const dx=e.clientX-px, dy=e.clientY-py; px=e.clientX;py=e.clientY;
+  cam.azim-=dx*0.006; cam.polar-=dy*0.006;
+  cam.polar=Math.max(0.08,Math.min(Math.PI-0.08,cam.polar));});
+renderer.domElement.addEventListener('pointerup',()=>drag=false);
+renderer.domElement.addEventListener('pointercancel',()=>drag=false);
+renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();
+  cam.r*=(1+Math.sign(e.deltaY)*0.08); cam.r=Math.max(1.6,Math.min(8,cam.r));},{passive:false});
+// 觸控雙指縮放
+let pinch=0;
+renderer.domElement.addEventListener('touchmove',e=>{
+  if(e.touches.length===2){ e.preventDefault();
+    const dx=e.touches[0].clientX-e.touches[1].clientX, dy=e.touches[0].clientY-e.touches[1].clientY;
+    const d=Math.hypot(dx,dy);
+    if(pinch) cam.r*=pinch/d, cam.r=Math.max(1.6,Math.min(8,cam.r));
+    pinch=d; }
+},{passive:false});
+renderer.domElement.addEventListener('touchend',()=>pinch=0);
+
+function animate(){
+  requestAnimationFrame(animate);
+  stepSolve();
+  applyCam();
+  renderer.render(scene,camera);
+}
+
+// =====================  介面建構  =====================
+function buildUI(){
+  // 形狀按鈕
+  const sg=document.getElementById('shapes');
+  SHAPES.forEach(s=>{
+    const b=document.createElement('button'); b.className='chip'+(s.id===STATE.shape?' on':'');
+    b.dataset.v=s.id; b.innerHTML=`<span class="k">${s.k}</span><span>${s.name}</span>`;
+    b.onclick=()=>{ STATE.shape=s.id;
+      sg.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x.dataset.v===s.id));
+      document.getElementById('orientGroup').classList.toggle('hidden',!isCyl(s.id));
+      updateTheory(); startSolve(); };
+    sg.appendChild(b);
+  });
+  // 材質
+  segWire('material','material',v=>{ STATE.material=v;
+    document.getElementById('epsrGroup').classList.toggle('hidden',v!=='dielectric');
+    updateTheory(); startSolve(); });
+  // εr
+  const er=document.getElementById('epsr');
+  er.oninput=()=>{ STATE.epsr=parseFloat(er.value);
+    document.getElementById('epsrVal').textContent=STATE.epsr.toFixed(1); updateTheory(); };
+  er.onchange=()=>{ if(STATE.material==='dielectric') startSolve(); };
+  // 軸向
+  segWire('orient','orient',v=>{ STATE.orient=v; startSolve(); });
+  // 密度（不需重解）
+  segWire('density','density',v=>{ STATE.density=v; restreamOnly(); });
+  // 解析度
+  segWire('quality','quality',v=>{ STATE.quality=v; N=(v==='fast'?40:56); allocate(); startSolve(); });
+  // 重置視角
+  document.getElementById('reset').onclick=()=>{ cam.azim=0.65;cam.polar=1.12;cam.r=3.4; };
+  // 行動裝置面板
+  document.getElementById('toggle').onclick=()=>document.getElementById('panel').classList.toggle('open');
+
+  document.getElementById('epsrGroup').classList.add('hidden'); // 初始導體
+  updateTheory();
+}
+function segWire(id,key,cb){
+  const root=document.getElementById(id);
+  root.querySelectorAll('button').forEach(b=>{
+    b.onclick=()=>{ root.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); cb(b.dataset.v); };
+  });
+}
+
+function updateTheory(){
+  const t=document.getElementById('theory'); const s=STATE.shape;
+  let html='';
+  if(STATE.material==='conductor'){
+    if(s==='solid_sphere'||s==='hollow_sphere')
+      html=`<b>導體球</b>：內部 E=0，表面場垂直入射。兩極場強最大 <span class="ref">|E|=3E₀</span>，赤道最小。空心殼即法拉第籠，腔內 E=0。`;
+    else if(s==='solid_cube'||s==='hollow_cube')
+      html=`<b>導體立方體</b>：內部 E=0，<span class="ref">尖角／稜邊</span>場強急遽放大（色標飽和於紅）。空心殼腔內 E=0（法拉第籠）。`;
+    else if(isCyl(s))
+      html=`<b>導體圓柱</b>：內部 E=0。橫置 (⊥場) 時側緣場強約 <span class="ref">2E₀</span>；端面稜邊另有放大。`;
+    else
+      html=`<b>導體</b>：內部 E=0，封閉腔內 E=0（法拉第籠效應），表面場垂直。`;
+  }else{
+    const e=STATE.epsr;
+    if(s==='solid_sphere'){
+      const ratio=(3/(e+2)).toFixed(3);
+      html=`<b>介電球</b>：內部仍為均勻場，理論 <span class="ref">E_in/E₀ = 3/(εᵣ+2) = ${ratio}</span>。外部疊加偶極場。（HUD 的數值解因計算域有限、邊界固定為遠場電位，會與無限域理論略有偏差。）`;
+    }else if(isCyl(s) && STATE.orient==='perp'){
+      const ratio=(2/(e+1)).toFixed(3);
+      html=`<b>介電圓柱(橫置)</b>：內部均勻，理論 <span class="ref">E_in/E₀ = 2/(εᵣ+1) = ${ratio}</span>（無限長近似）。`;
+    }else{
+      html=`<b>介電質</b>：場部分穿透並折射，內部場被削弱（介電屏蔽）。空心殼可見腔內殘餘場。`;
+    }
+  }
+  t.innerHTML=html;
+}
+
+// =====================  啟動  =====================
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+allocate();
+buildUI();
+applyCam();
+animate();
+startSolve();
+</script>
+</body>
+</html>

@@ -1,0 +1,847 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>古典力學雙星運動模擬</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Spline+Sans+Mono:wght@400;500;600&family=Spline+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070a12; --panel:#0e131f; --panel2:#121a2b;
+    --line:#243049; --line2:#1a2336;
+    --ink:#e8ecf6; --dim:#8b97b3; --faint:#5d6a86;
+    --cyan:#5fd4e6; --amber:#f4b25c; --com:#c9d2e8;
+    --good:#7fe0a8; --warn:#f08c7a;
+    --display:'Cormorant Garamond',serif;
+    --mono:'Spline Sans Mono',monospace;
+    --sans:'Spline Sans',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  body{
+    padding:26px 18px 46px;
+    background:
+      radial-gradient(900px 500px at 12% -8%, rgba(95,212,230,.10), transparent 60%),
+      radial-gradient(800px 480px at 92% 8%, rgba(244,178,92,.09), transparent 62%),
+      var(--bg);
+  }
+  .wrap{max-width:1020px;margin:0 auto}
+
+  /* ---- header ---- */
+  header{
+    border:1px solid var(--line);border-radius:14px;
+    background:linear-gradient(180deg,var(--panel2),var(--panel));
+    padding:20px 24px;position:relative;overflow:hidden;
+  }
+  header::before{
+    content:"";position:absolute;inset:0;
+    background-image:radial-gradient(rgba(255,255,255,.5) .6px,transparent .6px);
+    background-size:26px 26px;opacity:.05;pointer-events:none;
+  }
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.32em;
+    color:var(--cyan);text-transform:uppercase;margin-bottom:6px}
+  h1{font-family:var(--display);font-weight:700;font-size:38px;line-height:1.05;
+    letter-spacing:.01em}
+  h1 .glow{background:linear-gradient(92deg,var(--cyan),var(--amber));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .subhead{color:var(--dim);font-size:13px;margin-top:7px;max-width:640px}
+  .gconst{
+    margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;
+  }
+  .gcard,.pecard{
+    border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.018);
+    padding:10px 15px;display:flex;flex-direction:column;gap:3px;
+  }
+  .gcard .lbl,.pecard .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.18em;
+    color:var(--faint);text-transform:uppercase}
+  .gcard .val{font-family:var(--mono);font-size:19px;color:var(--ink);font-weight:600}
+  .gcard .unit{font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .pecard .val{font-family:var(--mono);font-size:16px;color:var(--amber)}
+
+  /* ---- layout ---- */
+  .grid{display:flex;flex-wrap:wrap;gap:16px;margin-top:16px}
+  .col-stage{flex:1 1 540px;min-width:320px}
+  .col-side{flex:1 1 300px;min-width:280px}
+  .card{
+    border:1px solid var(--line);border-radius:14px;
+    background:linear-gradient(180deg,var(--panel2),var(--panel));
+  }
+  .card-h{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px;border-bottom:1px solid var(--line2);
+  }
+  .card-h h2{font-family:var(--display);font-size:21px;font-weight:600}
+  .card-h .tag{font-family:var(--mono);font-size:10px;letter-spacing:.2em;
+    color:var(--faint);text-transform:uppercase}
+  .card-b{padding:14px 16px}
+
+  /* ---- stage ---- */
+  #stage{display:block;width:100%;border-radius:9px;background:#05070d;
+    border:1px solid var(--line2)}
+  .live{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+  .live div{border:1px solid var(--line2);border-radius:8px;padding:7px 9px;
+    background:rgba(255,255,255,.012)}
+  .live .l{font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;
+    color:var(--faint);text-transform:uppercase}
+  .live .v{font-family:var(--mono);font-size:13.5px;margin-top:2px;color:var(--ink)}
+
+  /* ---- buttons ---- */
+  .btns{display:flex;gap:9px;margin-top:13px;flex-wrap:wrap}
+  button.ctl{
+    flex:1 1 auto;font-family:var(--mono);font-size:13px;font-weight:600;
+    letter-spacing:.06em;padding:11px 10px;border-radius:9px;cursor:pointer;
+    border:1px solid var(--line);background:var(--panel2);color:var(--ink);
+    transition:.16s;display:flex;align-items:center;justify-content:center;gap:7px;
+  }
+  button.ctl:hover{border-color:var(--cyan);color:var(--cyan)}
+  button.ctl:active{transform:translateY(1px)}
+  button.ctl.go{background:linear-gradient(180deg,#103a3f,#0c2a2e);
+    border-color:#2c6f78;color:var(--cyan)}
+  button.ctl.go:hover{border-color:var(--cyan)}
+  button.ctl.go.running{background:linear-gradient(180deg,#0e2d31,#0a2125);opacity:.55}
+  button.ctl.pz{background:linear-gradient(180deg,#3a2f12,#2a230c);
+    border-color:#7a6326;color:var(--amber)}
+  button.ctl.rs{background:var(--panel2)}
+  .ico{width:13px;height:13px;display:inline-block}
+
+  /* ---- presets ---- */
+  .presets{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+  .presets button{
+    font-family:var(--mono);font-size:11px;padding:6px 11px;border-radius:20px;
+    border:1px solid var(--line);background:transparent;color:var(--dim);cursor:pointer;
+    transition:.15s;
+  }
+  .presets button:hover{border-color:var(--cyan);color:var(--cyan)}
+
+  /* ---- controls ---- */
+  .ball-h{display:flex;align-items:center;gap:9px;margin:14px 0 8px}
+  .ball-h:first-child{margin-top:2px}
+  .dot{width:13px;height:13px;border-radius:50%;flex:none;
+    box-shadow:0 0 11px currentColor}
+  .dot.a{background:var(--cyan);color:var(--cyan)}
+  .dot.b{background:var(--amber);color:var(--amber)}
+  .ball-h .nm{font-family:var(--display);font-size:18px;font-weight:600}
+  .ball-h .mu{font-family:var(--mono);font-size:10px;color:var(--faint);margin-left:auto}
+
+  .field{margin:9px 0}
+  .field .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+  .field label{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.04em}
+  .field .num{font-family:var(--mono);font-size:12.5px;color:var(--ink);font-weight:600}
+  .field .num small{color:var(--faint);font-weight:400;font-size:10.5px}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;
+    border-radius:3px;background:var(--line);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:15px;height:15px;border-radius:50%;background:var(--ink);cursor:pointer;
+    border:2px solid var(--bg);box-shadow:0 0 0 1px var(--line)}
+  input[type=range].a::-webkit-slider-thumb{background:var(--cyan)}
+  input[type=range].b::-webkit-slider-thumb{background:var(--amber)}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;
+    background:var(--ink);cursor:pointer;border:2px solid var(--bg)}
+  input[type=range].a::-moz-range-thumb{background:var(--cyan)}
+  input[type=range].b::-moz-range-thumb{background:var(--amber)}
+  .divider{height:1px;background:var(--line2);margin:13px 0}
+
+  /* ---- analysis ---- */
+  .ana-grid{display:flex;flex-wrap:wrap;gap:16px}
+  .ana-chart{flex:1 1 340px;min-width:300px}
+  .ana-data{flex:1 1 320px;min-width:280px}
+  #orbit{display:block;width:100%;border-radius:9px;background:#05070d;
+    border:1px solid var(--line2)}
+  .otype{
+    display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:9px;
+    border:1px solid var(--line);margin-bottom:11px;
+    background:linear-gradient(100deg,rgba(95,212,230,.07),rgba(244,178,92,.05));
+  }
+  .otype .badge{font-family:var(--display);font-size:25px;font-weight:700;
+    color:var(--cyan)}
+  .otype .desc{font-size:11.5px;color:var(--dim);line-height:1.4}
+  table.params{width:100%;border-collapse:collapse;font-family:var(--mono)}
+  table.params tr{border-bottom:1px solid var(--line2)}
+  table.params tr:last-child{border-bottom:none}
+  table.params td{padding:7px 4px;font-size:11.5px;vertical-align:top}
+  table.params td.k{color:var(--dim);width:48%}
+  table.params td.k .sym{color:var(--faint);font-size:10px}
+  table.params td.v{color:var(--ink);text-align:right;font-weight:500}
+  table.params td.v small{color:var(--faint);font-weight:400}
+  .legend{display:flex;gap:14px;margin-top:9px;flex-wrap:wrap}
+  .legend span{font-family:var(--mono);font-size:10.5px;color:var(--dim);
+    display:flex;align-items:center;gap:6px}
+  .legend i{width:16px;height:3px;border-radius:2px;display:inline-block}
+
+  footer{margin-top:22px;text-align:center;font-family:var(--mono);font-size:10.5px;
+    color:var(--faint);line-height:1.7}
+  .note{font-size:11px;color:var(--faint);margin-top:9px;line-height:1.55;
+    font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">Classical Mechanics · Euclidean Space</div>
+    <h1>古典力學<span class="glow">雙星運動</span>模擬</h1>
+    <p class="subhead">於歐幾里得（平直）時空中以牛頓重力積分兩體運動，不納入廣義相對論效應。兩星視為質點，採用速度 Verlet 辛積分法。</p>
+    <div class="gconst">
+      <div class="gcard">
+        <span class="lbl">宇宙重力常數 G</span>
+        <span class="val">6.674&nbsp;30 × 10⁻¹¹</span>
+        <span class="unit">N·m²·kg⁻²　（SI 單位）</span>
+      </div>
+      <div class="pecard">
+        <span class="lbl">重力位能（無限遠 = 0）</span>
+        <span class="val">U(r) = − G·m₁·m₂ / r</span>
+        <span class="lbl" style="color:var(--faint)">兩星間距 r 趨於 ∞ 時 U → 0</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- ===== STAGE ===== -->
+    <div class="col-stage">
+      <div class="card">
+        <div class="card-h">
+          <h2>運動模擬場</h2>
+          <span class="tag">視角鎖定於質心</span>
+        </div>
+        <div class="card-b">
+          <canvas id="stage" width="560" height="520"></canvas>
+          <div class="live">
+            <div><div class="l">目前間距 r</div><div class="v" id="liveR">—</div></div>
+            <div><div class="l">相對速率 |v_rel|</div><div class="v" id="liveV">—</div></div>
+            <div><div class="l">軌道內能 E</div><div class="v" id="liveE">—</div></div>
+          </div>
+          <div class="btns">
+            <button class="ctl go" id="btnStart">
+              <svg class="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              開始
+            </button>
+            <button class="ctl pz" id="btnPause">
+              <svg class="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+              暫停
+            </button>
+            <button class="ctl rs" id="btnReset">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 21v-6h6"/></svg>
+              重製
+            </button>
+          </div>
+          <div class="field" style="margin-top:13px">
+            <div class="row"><label>模擬速度</label><span class="num" id="speedNum"></span></div>
+            <input type="range" id="simSpeed" min="1" max="10" step="1" value="3">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CONTROLS ===== -->
+    <div class="col-side">
+      <div class="card">
+        <div class="card-h">
+          <h2>初始條件</h2>
+          <span class="tag">調整後自動重置</span>
+        </div>
+        <div class="card-b">
+
+          <div class="ball-h"><span class="dot a"></span><span class="nm">星體 A</span>
+            <span class="mu">cyan</span></div>
+          <div class="field">
+            <div class="row"><label>質量 m₁</label><span class="num" id="m1Num"></span></div>
+            <input type="range" class="a" id="m1" min="0.5" max="20" step="0.5" value="2">
+          </div>
+          <div class="field">
+            <div class="row"><label>初始速率 v₁</label><span class="num" id="s1Num"></span></div>
+            <input type="range" class="a" id="s1" min="0" max="120" step="0.1" value="15">
+          </div>
+          <div class="field">
+            <div class="row"><label>移動角度 θ₁</label><span class="num" id="a1Num"></span></div>
+            <input type="range" class="a" id="a1" min="0" max="360" step="5" value="90">
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="ball-h"><span class="dot b"></span><span class="nm">星體 B</span>
+            <span class="mu">amber</span></div>
+          <div class="field">
+            <div class="row"><label>質量 m₂</label><span class="num" id="m2Num"></span></div>
+            <input type="range" class="b" id="m2" min="0.5" max="20" step="0.5" value="1">
+          </div>
+          <div class="field">
+            <div class="row"><label>初始速率 v₂</label><span class="num" id="s2Num"></span></div>
+            <input type="range" class="b" id="s2" min="0" max="120" step="0.1" value="30">
+          </div>
+          <div class="field">
+            <div class="row"><label>移動角度 θ₂</label><span class="num" id="a2Num"></span></div>
+            <input type="range" class="b" id="a2" min="0" max="360" step="5" value="270">
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="field">
+            <div class="row"><label>初始間距 d</label><span class="num" id="sepNum"></span></div>
+            <input type="range" id="sep" min="0.2" max="4" step="0.05" value="1">
+          </div>
+
+          <div class="presets">
+            <button data-p="circle">近圓軌道</button>
+            <button data-p="ellipse">橢圓軌道</button>
+            <button data-p="parabola">拋物線</button>
+            <button data-p="hyperbola">雙曲線</button>
+          </div>
+          <p class="note">預設組態以總質量 3 M☉、間距 1 AU 計：圓軌道相對速率 √(GM/r) ≈ 51.6 km/s，逃逸速率 √(2GM/r) ≈ 73.0 km/s。質量以太陽質量 M☉ = 1.989×10³⁰ kg、速率以 km/s、間距以天文單位 AU = 1.496×10¹¹ m 計量；積分仍在 SI 單位下進行。角度自 +x 軸逆時針起算。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ANALYSIS ===== -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-h">
+      <h2>軌道形狀與參數分析</h2>
+      <span class="tag">依初始條件解析計算</span>
+    </div>
+    <div class="card-b">
+      <div class="ana-grid">
+        <div class="ana-chart">
+          <canvas id="orbit" width="380" height="330"></canvas>
+          <div class="legend">
+            <span><i style="background:var(--cyan)"></i>星體 A 軌跡</span>
+            <span><i style="background:var(--amber)"></i>星體 B 軌跡</span>
+            <span><i style="background:var(--com)"></i>質心（共同焦點）</span>
+          </div>
+        </div>
+        <div class="ana-data">
+          <div class="otype">
+            <span class="badge" id="otypeBadge">—</span>
+            <span class="desc" id="otypeDesc">調整初始條件以檢視預測軌道。</span>
+          </div>
+          <table class="params"><tbody id="paramBody"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    雙體問題化約為約化質量 μ 對質心的等效單體運動 · 軌道形狀由總力學能 E 與角動量 L 決定<br>
+    E &lt; 0 → 橢圓（束縛）　E = 0 → 拋物線　E &gt; 0 → 雙曲線（非束縛）
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ===== 物理常數（SI） ===== */
+const G    = 6.67430e-11;          // N·m²·kg⁻²
+const MSUN = 1.989e30;             // kg
+const AU   = 1.495978707e11;       // m
+const DAY  = 86400, YEAR = 365.25*DAY;
+const SOFT = 0.004*AU;             // 數值軟化長度，避免極近距離發散
+
+/* ===== DOM ===== */
+const $ = id => document.getElementById(id);
+const stage = $('stage'), octx = $('orbit');
+const sctx = stage.getContext('2d');
+const orbitCtx = octx.getContext('2d');
+let CW, CH, OW, OH;
+
+function setupCanvas(cv, w, h){
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = w*dpr; cv.height = h*dpr;
+  cv.style.aspectRatio = w+'/'+h;
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return [w,h];
+}
+function fitCanvases(){
+  const sw = stage.clientWidth || 560;
+  [CW,CH] = setupCanvas(stage, sw, sw*520/560);
+  const ow = octx.clientWidth || 380;
+  [OW,OH] = setupCanvas(octx, ow, ow*330/380);
+}
+
+/* ===== 控制項 ===== */
+const ids = ['m1','s1','a1','m2','s2','a2','sep','simSpeed'];
+const ctrl = {}; ids.forEach(i=>ctrl[i]=$(i));
+
+/* ===== 狀態 ===== */
+let running=false, bodies=null, trails=[[],[]], analysis=null;
+let mainScale=1, baseScale=1, stars=[], vref=1;
+
+function makeStars(){
+  stars=[];
+  for(let i=0;i<150;i++)
+    stars.push({x:Math.random(),y:Math.random(),
+      r:Math.random()*1.1+0.25, a:Math.random()*0.5+0.15});
+}
+
+/* ===== 讀取初始條件 ===== */
+function readInputs(){
+  return {
+    m1:+ctrl.m1.value*MSUN, m2:+ctrl.m2.value*MSUN,
+    s1:+ctrl.s1.value*1000, s2:+ctrl.s2.value*1000,
+    a1:+ctrl.a1.value*Math.PI/180, a2:+ctrl.a2.value*Math.PI/180,
+    sep:+ctrl.sep.value*AU
+  };
+}
+
+/* 建立初始星體：沿 x 軸分離，質心置於原點 */
+function initBodies(){
+  const p = readInputs();
+  const M = p.m1+p.m2;
+  const x1 = -p.sep*p.m2/M, x2 = p.sep*p.m1/M;
+  bodies = [
+    {m:p.m1, x:x1, y:0, vx:p.s1*Math.cos(p.a1), vy:p.s1*Math.sin(p.a1)},
+    {m:p.m2, x:x2, y:0, vx:p.s2*Math.cos(p.a2), vy:p.s2*Math.sin(p.a2)}
+  ];
+
+  // 質心修正（Center of Mass correction）：扣除系統質心速度，
+  // 強制初始總動量為零。此舉不改變相對運動（v_rel = v₁−v₂ 不變），
+  // 故軌道形狀／能量／週期皆與原本一致；但能讓質心永遠靜止於原點，
+  // 避免絕對座標長時間累積、最終導致浮點數精度丟失。
+  const totalVx = (bodies[0].m*bodies[0].vx + bodies[1].m*bodies[1].vx)/M;
+  const totalVy = (bodies[0].m*bodies[0].vy + bodies[1].m*bodies[1].vy)/M;
+  bodies[0].vx -= totalVx; bodies[0].vy -= totalVy;
+  bodies[1].vx -= totalVx; bodies[1].vy -= totalVy;
+
+  vref=Math.max(Math.hypot(bodies[0].vx,bodies[0].vy),Math.hypot(bodies[1].vx,bodies[1].vy))||1;
+  mainScale=baseScale;
+  trails=[[],[]];
+}
+
+/* ===== 軌道解析計算 ===== */
+function computeAnalysis(){
+  const p = readInputs();
+  const M = p.m1+p.m2;
+  const mu = p.m1*p.m2/M;          // 約化質量
+  const GM = G*M;                  // 相對運動的等效 GM
+  // 相對位置 / 速度（A 相對 B）
+  const rx = -p.sep, ry = 0, r = p.sep;
+  const v1x=p.s1*Math.cos(p.a1), v1y=p.s1*Math.sin(p.a1);
+  const v2x=p.s2*Math.cos(p.a2), v2y=p.s2*Math.sin(p.a2);
+  const vx=v1x-v2x, vy=v1y-v2y;
+  const v2 = vx*vx+vy*vy;
+  const h  = rx*vy - ry*vx;        // 相對軌道比角動量
+  const eps= 0.5*v2 - GM/r;        // 相對軌道比能量
+  const a  = -GM/(2*eps);          // 半長軸（雙曲線為負）
+  const slr= h*h/GM;               // 半正焦弦 p
+  // 離心率向量（指向近星點）
+  const ex = (vy*h)/GM - rx/r;
+  const ey = (-vx*h)/GM - ry/r;
+  let e = Math.hypot(ex,ey);
+  const phi0 = Math.atan2(ey,ex);  // 近星點方位角
+
+  let type, desc, b, rPeri, rApo, T, defl=null;
+  if(Math.abs(eps) < GM/r*1e-6 || Math.abs(e-1)<2e-3){
+    type='拋物線'; e=1;
+    desc='總力學能 E ≈ 0，恰處束縛與非束縛的臨界。兩星僅一次接近後永久分離。';
+    b=null; rPeri=slr/2; rApo=Infinity; T=null;
+  } else if(eps<0){
+    if(e<1e-3){ type='圓形';
+      desc='E < 0 且離心率 ≈ 0，兩星以固定間距互繞，為橢圓的特例。'; }
+    else { type='橢圓';
+      desc='E < 0 為束縛軌道，兩星沿閉合橢圓週期性互繞，質心位於共同焦點。'; }
+    b=a*Math.sqrt(Math.max(0,1-e*e));
+    rPeri=a*(1-e); rApo=a*(1+e);
+    T=2*Math.PI*Math.sqrt(a*a*a/GM);
+  } else {
+    type='雙曲線';
+    desc='E > 0 為非束縛軌道，兩星一次掠近後沿漸近線永久飛離。';
+    b=Math.abs(a)*Math.sqrt(e*e-1);
+    rPeri=a*(1-e); rApo=Infinity; T=null;
+    defl=2*Math.asin(1/e);          // 偏轉角
+  }
+  return {p,M,mu,GM,r,h,eps,a,slr,e,phi0,type,desc,b,rPeri,rApo,T,defl,
+          Etot:mu*eps, Ltot:mu*h,
+          f1:p.m2/M, f2:p.m1/M};   // 各星繞質心的縮放比例
+}
+
+/* ===== 數值格式 ===== */
+function sci(x,s=3){
+  if(x===0) return '0';
+  if(!isFinite(x)) return '∞';
+  const sign=x<0?'−':''; x=Math.abs(x);
+  const ex=Math.floor(Math.log10(x));
+  if(ex>=-2&&ex<4) return sign+x.toPrecision(s).replace(/\.?0+$/,'');
+  const m=(x/Math.pow(10,ex)).toPrecision(s);
+  const sup='⁰¹²³⁴⁵⁶⁷⁸⁹';
+  const exs=(ex<0?'⁻':'')+String(Math.abs(ex)).split('').map(d=>sup[+d]).join('');
+  return sign+m+' × 10'+exs;
+}
+const fmtAU = m => isFinite(m)? (m/AU).toFixed(3)+' AU' : '∞';
+function fmtT(s){
+  if(s===null||!isFinite(s)) return '—（非週期）';
+  if(s<2*DAY)  return (s/DAY).toFixed(2)+' 天';
+  if(s<2*YEAR) return (s/DAY).toFixed(1)+' 天';
+  return (s/YEAR).toFixed(3)+' 年';
+}
+
+/* ===== 描繪預測軌道圖 ===== */
+function conicPoints(slr,e,phi0,rCap){
+  const pts=[];
+  const push=nu=>{
+    const den=1+e*Math.cos(nu);
+    if(den<=1e-4) return;
+    const r=slr/den;
+    if(r>rCap) return;
+    pts.push([r*Math.cos(phi0+nu), r*Math.sin(phi0+nu)]);
+  };
+  if(e<1-1e-4){
+    for(let nu=0;nu<=2*Math.PI+1e-9;nu+=2*Math.PI/720) push(nu);
+  } else if(e>1+1e-4){
+    const num=Math.acos(-1/e);
+    for(let nu=-num+0.01;nu<=num-0.01;nu+=(2*num)/640) push(nu);
+  } else {
+    for(let nu=-Math.PI+0.04;nu<=Math.PI-0.04;nu+=2*Math.PI/640) push(nu);
+  }
+  return pts;
+}
+
+function drawOrbitChart(){
+  const A=analysis, ctx=orbitCtx;
+  ctx.clearRect(0,0,OW,OH);
+  // 背景格線
+  ctx.strokeStyle='rgba(255,255,255,.035)'; ctx.lineWidth=1;
+  for(let gx=0;gx<=OW;gx+=OW/8){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,OH);ctx.stroke();}
+  for(let gy=0;gy<=OH;gy+=OH/7){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(OW,gy);ctx.stroke();}
+
+  const cx=OW/2, cy=OH/2;
+  const rCap = isFinite(A.rApo)? A.rApo*1.04 : A.rPeri*7 + A.r;
+  const rel = conicPoints(A.slr,A.e,A.phi0,rCap);
+  if(!rel.length){ return; }
+  // 兩星軌跡 = 相對軌跡縮放
+  const b1=rel.map(([x,y])=>[ A.f1*x,  A.f1*y]);
+  const b2=rel.map(([x,y])=>[-A.f2*x, -A.f2*y]);
+  let mx=1e-30;
+  b1.concat(b2).forEach(([x,y])=>{mx=Math.max(mx,Math.abs(x),Math.abs(y));});
+  const sc=Math.min(OW,OH)*0.40/mx;
+  const X=x=>cx+x*sc, Y=y=>cy-y*sc;
+
+  const poly=(pts,color,open)=>{
+    ctx.beginPath();
+    pts.forEach(([x,y],i)=> i?ctx.lineTo(X(x),Y(y)):ctx.moveTo(X(x),Y(y)));
+    if(!open) ctx.closePath();
+    ctx.strokeStyle=color; ctx.lineWidth=1.8; ctx.stroke();
+  };
+  const isOpen = A.type==='雙曲線'||A.type==='拋物線';
+  poly(b1,'#5fd4e6',isOpen);
+  poly(b2,'#f4b25c',isOpen);
+
+  // 主軸（近星點 — 質心方向）
+  ctx.strokeStyle='rgba(255,255,255,.14)'; ctx.lineWidth=1;
+  ctx.setLineDash([3,4]);
+  ctx.beginPath();
+  ctx.moveTo(X(-Math.cos(A.phi0)*A.f2*A.r*0.6),Y(-Math.sin(A.phi0)*A.f2*A.r*0.6));
+  ctx.lineTo(X( Math.cos(A.phi0)*A.f1*A.r*0.6),Y( Math.sin(A.phi0)*A.f1*A.r*0.6));
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // 近星點標記
+  const peri1=[ A.f1*A.rPeri*Math.cos(A.phi0),  A.f1*A.rPeri*Math.sin(A.phi0)];
+  const peri2=[-A.f2*A.rPeri*Math.cos(A.phi0), -A.f2*A.rPeri*Math.sin(A.phi0)];
+  [[peri1,'#5fd4e6'],[peri2,'#f4b25c']].forEach(([pt,c])=>{
+    ctx.beginPath(); ctx.arc(X(pt[0]),Y(pt[1]),3,0,2*Math.PI);
+    ctx.fillStyle=c; ctx.fill();
+  });
+
+  // 質心（共同焦點）
+  ctx.beginPath(); ctx.arc(cx,cy,4.5,0,2*Math.PI);
+  ctx.fillStyle='#c9d2e8'; ctx.fill();
+  ctx.strokeStyle='rgba(201,210,232,.4)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(cx,cy,8,0,2*Math.PI); ctx.stroke();
+
+  // 標籤
+  ctx.font='10px "Spline Sans Mono"';
+  ctx.fillStyle='#5d6a86';
+  ctx.fillText('近星點', X(peri1[0])+6, Y(peri1[1])-5);
+  ctx.fillStyle='#8b97b3';
+  ctx.fillText(A.type, 10, 17);
+}
+
+/* ===== 填入參數表 ===== */
+function fillParams(){
+  const A=analysis;
+  $('otypeBadge').textContent=A.type;
+  $('otypeDesc').textContent=A.desc;
+  const rows=[];
+  const add=(k,sym,v)=>rows.push(
+    `<tr><td class="k">${k}${sym?' <span class="sym">'+sym+'</span>':''}</td><td class="v">${v}</td></tr>`);
+
+  add('軌道類型','',A.type);
+  add('離心率','e',A.e.toFixed(4));
+  add('相對軌道半長軸','a', (A.a>0||A.type==='雙曲線')
+        ? sci(Math.abs(A.a))+' m <small>('+fmtAU(Math.abs(A.a))+')</small>'
+        : '∞');
+  if(A.b!=null) add('相對軌道半短軸','b', sci(A.b)+' m');
+  add('半正焦弦','p', sci(A.slr)+' m <small>('+fmtAU(A.slr)+')</small>');
+  add('近星點距離','r_min', sci(A.rPeri)+' m <small>('+fmtAU(A.rPeri)+')</small>');
+  add('遠星點距離','r_max', isFinite(A.rApo)
+        ? sci(A.rApo)+' m <small>('+fmtAU(A.rApo)+')</small>' : '∞（非束縛）');
+  add('公轉週期','T', fmtT(A.T));
+  if(A.defl!=null) add('漸近偏轉角','δ',(A.defl*180/Math.PI).toFixed(2)+'°');
+  rows.push('<tr><td class="k" colspan="2" style="padding-top:11px;color:var(--faint);font-size:10px;letter-spacing:.14em">守恆量與系統量</td></tr>');
+  add('系統總力學能','E', sci(A.Etot)+' J');
+  add('系統角動量','L', sci(A.Ltot)+' kg·m²/s');
+  add('約化質量','μ', sci(A.mu)+' kg');
+  add('總質量','M', sci(A.M)+' kg <small>('+(A.M/MSUN).toFixed(2)+' M☉)</small>');
+  add('A 繞質心半長軸','a₁', isFinite(A.a)&&A.a>0? fmtAU(A.a*A.f1):'∞');
+  add('B 繞質心半長軸','a₂', isFinite(A.a)&&A.a>0? fmtAU(A.a*A.f2):'∞');
+  $('paramBody').innerHTML=rows.join('');
+}
+
+/* ===== 主場景繪製 ===== */
+function setMainScale(){
+  const A=analysis;
+  let ext;
+  if(A.type==='橢圓'||A.type==='圓形')
+    ext=A.rApo*Math.max(A.f1,A.f2);
+  else
+    ext=A.p.sep*1.6;
+  baseScale=Math.min(CW,CH)*0.40/ext;
+  mainScale=baseScale;
+}
+
+function drawStage(){
+  const ctx=sctx;
+  ctx.fillStyle='#05070d'; ctx.fillRect(0,0,CW,CH);
+  // 星空
+  stars.forEach(s=>{
+    ctx.globalAlpha=s.a;
+    ctx.fillStyle='#cfd8ee';
+    ctx.beginPath(); ctx.arc(s.x*CW,s.y*CH,s.r,0,2*Math.PI); ctx.fill();
+  });
+  ctx.globalAlpha=1;
+
+  if(!bodies) return;
+  const M=bodies[0].m+bodies[1].m;
+  const comx=(bodies[0].m*bodies[0].x+bodies[1].m*bodies[1].x)/M;
+  const comy=(bodies[0].m*bodies[0].y+bodies[1].m*bodies[1].y)/M;
+  // 自動縮小：任一星離質心超出視野時縮放（只縮不放，重置時還原）
+  let dmax=0;
+  bodies.forEach(b=>{ dmax=Math.max(dmax,Math.hypot(b.x-comx,b.y-comy)); });
+  const lim=Math.min(CW,CH)*0.44;
+  if(dmax*mainScale>lim) mainScale=lim/dmax;
+  const SX=x=>CW/2+(x-comx)*mainScale;
+  const SY=y=>CH/2-(y-comy)*mainScale;
+
+  // 預測軌道導引線
+  const A=analysis;
+  const rCap=isFinite(A.rApo)?A.rApo*1.04:A.rPeri*7+A.r;
+  const rel=conicPoints(A.slr,A.e,A.phi0,rCap);
+  if(rel.length){
+    const isOpen=A.type==='雙曲線'||A.type==='拋物線';
+    [['#5fd4e6',A.f1,1],['#f4b25c',-A.f2,1]].forEach(([c,f])=>{
+      ctx.beginPath();
+      rel.forEach(([x,y],i)=>{
+        const px=SX(f*x), py=SY(f*y);
+        i?ctx.lineTo(px,py):ctx.moveTo(px,py);
+      });
+      if(!isOpen) ctx.closePath();
+      ctx.strokeStyle=c; ctx.globalAlpha=.16; ctx.lineWidth=1.2; ctx.stroke();
+    });
+    ctx.globalAlpha=1;
+  }
+
+  // 質心
+  ctx.strokeStyle='rgba(201,210,232,.5)'; ctx.lineWidth=1;
+  const cm=8;
+  ctx.beginPath();ctx.moveTo(CW/2-cm,CH/2);ctx.lineTo(CW/2+cm,CH/2);
+  ctx.moveTo(CW/2,CH/2-cm);ctx.lineTo(CW/2,CH/2+cm);ctx.stroke();
+  ctx.fillStyle='#c9d2e8';
+  ctx.beginPath();ctx.arc(CW/2,CH/2,2,0,2*Math.PI);ctx.fill();
+
+  // 軌跡
+  const cols=['#5fd4e6','#f4b25c'];
+  trails.forEach((tr,i)=>{
+    for(let k=1;k<tr.length;k++){
+      ctx.globalAlpha=(k/tr.length)*0.55;
+      ctx.strokeStyle=cols[i]; ctx.lineWidth=1.6;
+      ctx.beginPath();
+      ctx.moveTo(SX(tr[k-1][0]),SY(tr[k-1][1]));
+      ctx.lineTo(SX(tr[k][0]),SY(tr[k][1]));
+      ctx.stroke();
+    }
+  });
+  ctx.globalAlpha=1;
+
+  // 星體
+  bodies.forEach((bd,i)=>{
+    const px=SX(bd.x),py=SY(bd.y);
+    const rad=Math.max(5,Math.min(17,5+Math.cbrt(bd.m/MSUN)*4.2));
+    const g=ctx.createRadialGradient(px,py,1,px,py,rad*2.6);
+    g.addColorStop(0,cols[i]); g.addColorStop(.32,cols[i]+'88');
+    g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;
+    ctx.beginPath();ctx.arc(px,py,rad*2.6,0,2*Math.PI);ctx.fill();
+    ctx.fillStyle=cols[i];
+    ctx.beginPath();ctx.arc(px,py,rad,0,2*Math.PI);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.85)';
+    ctx.beginPath();ctx.arc(px-rad*0.3,py-rad*0.3,rad*0.32,0,2*Math.PI);ctx.fill();
+    // 速度箭頭
+    const spd=Math.hypot(bd.vx,bd.vy), Lpx=Math.min(90,56*spd/vref);   // 箭長∝速率
+    const ex=px+(spd?bd.vx/spd*Lpx:0), ey=py-(spd?bd.vy/spd*Lpx:0);
+    ctx.strokeStyle=cols[i]; ctx.globalAlpha=.85; ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(ex,ey);ctx.stroke();
+    const ang=Math.atan2(ey-py,ex-px);
+    ctx.beginPath();
+    ctx.moveTo(ex,ey);
+    ctx.lineTo(ex-7*Math.cos(ang-0.4),ey-7*Math.sin(ang-0.4));
+    ctx.moveTo(ex,ey);
+    ctx.lineTo(ex-7*Math.cos(ang+0.4),ey-7*Math.sin(ang+0.4));
+    ctx.stroke(); ctx.globalAlpha=1;
+    // 標籤
+    ctx.font='600 12px "Spline Sans Mono"';
+    ctx.fillStyle=cols[i];
+    ctx.fillText(i?'B':'A',px+rad+5,py-rad-2);
+  });
+
+  // 比例尺（取 1/2/5×10ⁿ AU）
+  const auPx=AU*mainScale, want=CW*0.16/auPx;
+  const pow=Math.pow(10,Math.floor(Math.log10(want)));
+  const nice=[1,2,5,10].map(k=>k*pow).filter(v=>v>=want*0.7)[0]||pow*10;
+  const barPx=nice*auPx, bx=16, by=CH-18;
+  ctx.strokeStyle='rgba(201,210,232,.55)'; ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.moveTo(bx,by-4); ctx.lineTo(bx,by+4); ctx.moveTo(bx,by); ctx.lineTo(bx+barPx,by);
+  ctx.moveTo(bx+barPx,by-4); ctx.lineTo(bx+barPx,by+4); ctx.stroke();
+  ctx.font='11px "Spline Sans Mono", monospace'; ctx.fillStyle='#8b97b3'; ctx.textAlign='left';
+  ctx.fillText((nice<1?nice.toFixed(2):nice)+' AU',bx,by-9);
+}
+
+/* ===== 物理積分（速度 Verlet） ===== */
+function accel(b1,b2){
+  const dx=b2.x-b1.x, dy=b2.y-b1.y;
+  const r2=dx*dx+dy*dy+SOFT*SOFT;
+  const r=Math.sqrt(r2);
+  const f1=G*b2.m/(r2*r), f2=G*b1.m/(r2*r);
+  return [f1*dx,f1*dy,-f2*dx,-f2*dy];
+}
+function step(dt){
+  const [a1x,a1y,a2x,a2y]=accel(bodies[0],bodies[1]);
+  bodies[0].x+=bodies[0].vx*dt+0.5*a1x*dt*dt;
+  bodies[0].y+=bodies[0].vy*dt+0.5*a1y*dt*dt;
+  bodies[1].x+=bodies[1].vx*dt+0.5*a2x*dt*dt;
+  bodies[1].y+=bodies[1].vy*dt+0.5*a2y*dt*dt;
+  const [b1x,b1y,b2x,b2y]=accel(bodies[0],bodies[1]);
+  bodies[0].vx+=0.5*(a1x+b1x)*dt;
+  bodies[0].vy+=0.5*(a1y+b1y)*dt;
+  bodies[1].vx+=0.5*(a2x+b2x)*dt;
+  bodies[1].vy+=0.5*(a2y+b2y)*dt;
+}
+
+/* 自適應子步長：dt ≤ 1% × min(動力學時標, 穿越時標)，近星點自動加密，
+   使辛積分在高離心率軌道也維持能量守恆。 */
+function advance(total){
+  const M=bodies[0].m+bodies[1].m;
+  let t=0, guard=0;
+  while(t<total && guard<4000){
+    const dx=bodies[0].x-bodies[1].x, dy=bodies[0].y-bodies[1].y;
+    const r=Math.max(Math.hypot(dx,dy),SOFT);
+    const vr=Math.hypot(bodies[0].vx-bodies[1].vx, bodies[0].vy-bodies[1].vy)||1;
+    const tau=Math.min(Math.sqrt(r*r*r/(G*M)), r/vr);
+    const dt=Math.min(total-t, 0.01*tau);
+    step(dt); t+=dt; guard++;
+  }
+}
+
+/* ===== 即時讀數 ===== */
+function updateLive(){
+  if(!bodies) return;
+  const dx=bodies[0].x-bodies[1].x, dy=bodies[0].y-bodies[1].y;
+  const r=Math.hypot(dx,dy);
+  const vx=bodies[0].vx-bodies[1].vx, vy=bodies[0].vy-bodies[1].vy;
+  const vrel=Math.hypot(vx,vy);
+  const mu=bodies[0].m*bodies[1].m/(bodies[0].m+bodies[1].m);
+  const E=0.5*mu*vrel*vrel - G*bodies[0].m*bodies[1].m/r;
+  $('liveR').textContent=fmtAU(r);
+  $('liveV').textContent=(vrel/1000).toFixed(2)+' km/s';
+  $('liveE').textContent=sci(E,3)+' J';
+}
+
+/* ===== 動畫迴圈 ===== */
+function loop(){
+  if(running){
+    const sp=+ctrl.simSpeed.value;
+    const chunks=10, total=sp*9000;      // 每幀模擬秒數
+    for(let i=0;i<chunks;i++){
+      advance(total/chunks);
+      trails[0].push([bodies[0].x,bodies[0].y]);
+      trails[1].push([bodies[1].x,bodies[1].y]);
+      if(trails[0].length>1600){trails[0].shift();trails[1].shift();}
+    }
+  }
+  drawStage();
+  updateLive();
+  requestAnimationFrame(loop);
+}
+
+/* ===== UI 更新 ===== */
+function refreshLabels(){
+  $('m1Num').innerHTML=(+ctrl.m1.value).toFixed(1)+' <small>M☉</small>';
+  $('m2Num').innerHTML=(+ctrl.m2.value).toFixed(1)+' <small>M☉</small>';
+  $('s1Num').innerHTML=(+ctrl.s1.value).toFixed(1)+' <small>km/s</small>';
+  $('s2Num').innerHTML=(+ctrl.s2.value).toFixed(1)+' <small>km/s</small>';
+  $('a1Num').innerHTML=ctrl.a1.value+' <small>°</small>';
+  $('a2Num').innerHTML=ctrl.a2.value+' <small>°</small>';
+  $('sepNum').innerHTML=(+ctrl.sep.value).toFixed(2)+' <small>AU</small>';
+  $('speedNum').innerHTML=ctrl.simSpeed.value+' <small>×</small>';
+}
+function setRunning(r){
+  running=r;
+  $('btnStart').classList.toggle('running',r);
+  $('btnStart').lastChild.textContent= r?' 運行中':' 開始';
+}
+function rebuild(){           // 參數變更：重算 + 重置
+  refreshLabels();
+  analysis=computeAnalysis();
+  setMainScale();
+  initBodies();
+  drawOrbitChart();
+  fillParams();
+  setRunning(false);
+  drawStage(); updateLive();
+}
+
+/* ===== 事件 ===== */
+['m1','s1','a1','m2','s2','a2','sep'].forEach(id=>{
+  ctrl[id].addEventListener('input',rebuild);
+});
+ctrl.simSpeed.addEventListener('input',refreshLabels);
+
+$('btnStart').addEventListener('click',()=>{ if(bodies) setRunning(true); });
+$('btnPause').addEventListener('click',()=>setRunning(false));
+$('btnReset').addEventListener('click',()=>{
+  initBodies(); setRunning(false); drawStage(); updateLive();
+});
+
+window.addEventListener('keydown',e=>{
+  if(e.code==='Space' && !/INPUT|BUTTON/.test(e.target.tagName)){ e.preventDefault(); setRunning(!running); }
+});
+
+/* 預設組態 */
+const PRESETS={
+  circle   :{m1:2,m2:1,s1:17.2,a1:90,s2:34.4,a2:270,sep:1},
+  ellipse  :{m1:2,m2:1,s1:15,a1:90,s2:30,a2:270,sep:1},
+  parabola :{m1:2,m2:1,s1:24.3,a1:90,s2:48.7,a2:270,sep:1},
+  hyperbola:{m1:2,m2:1,s1:32,a1:90,s2:64,a2:270,sep:1}
+};
+document.querySelectorAll('.presets button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const c=PRESETS[btn.dataset.p];
+    for(const k in c) ctrl[k].value=c[k];
+    rebuild();
+  });
+});
+
+/* ===== 啟動 ===== */
+function boot(){
+  fitCanvases();
+  makeStars();
+  rebuild();
+  drawOrbitChart();
+  loop();
+}
+window.addEventListener('resize',()=>{
+  fitCanvases(); makeStars(); setMainScale();
+  drawStage(); drawOrbitChart();
+});
+boot();
+</script>
+</body>
+</html>

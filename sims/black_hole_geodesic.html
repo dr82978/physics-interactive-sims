@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>黑洞測地線發射器 · Schwarzschild Geodesic Launcher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+TC:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#06070d; --bg2:#0a0d18; --ink:#e9ecf5; --muted:#8b93ad; --faint:#5b6480;
+    --line:rgba(140,160,210,.14); --panel:rgba(16,20,38,.6);
+    --photon:#6fd3ff; --massive:#ffb04d; --grid:rgba(120,150,210,.07);
+    --ok:#54e0a6; --crit:#ff7a5c; --gold:#f3c969;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --sans:'IBM Plex Sans TC',system-ui,sans-serif;
+    --disp:'Fraunces',Georgia,serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:linear-gradient(180deg,var(--bg),var(--bg2) 70%,#04050a);color:var(--ink);
+    font-family:var(--sans);min-height:100vh;-webkit-font-smoothing:antialiased}
+  header{max-width:1280px;margin:0 auto;padding:30px 26px 4px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:10px}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--photon);opacity:.8}
+  h1{font-family:var(--disp);font-weight:500;font-size:clamp(26px,3.6vw,40px);line-height:1.05}
+  h1 em{font-style:italic;color:var(--gold)}
+  .sub{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .eq{font-family:var(--mono);font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:7px 15px}
+  .eq b{color:var(--photon)}
+
+  main{max-width:1280px;margin:0 auto;padding:16px 26px 50px;display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start}
+  @media(max-width:960px){main{grid-template-columns:1fr;padding:12px 14px 40px}}
+
+  .stage{position:relative;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#070912}
+  canvas{display:block;width:100%;height:auto;aspect-ratio:1/1}
+  .ovl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
+    background:rgba(5,6,12,.74);backdrop-filter:blur(3px);z-index:4;transition:.3s;padding:24px}
+  .ovl.hide{opacity:0;pointer-events:none}
+  .ovl div{max-width:320px}
+  .ovl .big{font-family:var(--disp);font-size:24px;color:var(--gold);margin-bottom:8px}
+  .ovl .btn{pointer-events:auto}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--photon);outline-offset:2px}
+  .ovl .small{font-family:var(--mono);font-size:12.5px;color:var(--muted);line-height:1.7}
+
+  .controls{display:flex;flex-direction:column;gap:14px}
+  .card{border:1px solid var(--line);border-radius:14px;background:var(--panel);backdrop-filter:blur(8px);padding:16px 16px 18px}
+  .card h2{font-family:var(--mono);font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:14px;display:flex;justify-content:space-between}
+  .card h2 .g{color:var(--photon)}
+
+  .ctl{margin-bottom:16px}.ctl:last-child{margin-bottom:0}
+  .ctl .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:10px}
+  .ctl label{font-size:13.5px;font-weight:500}
+  .ctl .val{font-family:var(--mono);font-size:12.5px;color:var(--gold)}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:99px;outline:none;background:linear-gradient(90deg,#2a3a66,var(--photon))}
+  input[type=range].mass{background:linear-gradient(90deg,#2a3a66,var(--gold),var(--crit))}
+  input[type=range].rad{background:linear-gradient(90deg,#2a3a66,var(--photon),#bfe9ff)}
+  input[type=range].ang{background:linear-gradient(90deg,#3a2a4a,var(--massive))}
+  input[type=range].spd{background:linear-gradient(90deg,#23304a,var(--massive))}
+  input[type=range]:disabled{opacity:.3}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#fff,#cfd7ee 45%,#8893b6);border:1px solid rgba(255,255,255,.7);cursor:grab;box-shadow:0 2px 8px rgba(0,0,0,.6)}
+  input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;border:1px solid #fff;background:#cfd7ee;cursor:grab}
+
+  .seg{display:flex;gap:0;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{flex:1;background:transparent;border:none;color:var(--muted);font-family:var(--mono);font-size:12.5px;padding:9px;cursor:pointer;transition:.2s}
+  .seg button.on{background:rgba(111,211,255,.14);color:var(--photon)}
+  .seg button.on.m{background:rgba(255,176,77,.14);color:var(--massive)}
+
+  .status{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:12.5px;padding:9px 12px;border-radius:9px;border:1px solid var(--line);margin-bottom:12px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--crit);box-shadow:0 0 10px var(--crit)}
+  .status.bh{border-color:rgba(84,224,166,.4);color:var(--ok)} .status.bh .dot{background:var(--ok);box-shadow:0 0 10px var(--ok)}
+
+  .btn{width:100%;font-family:var(--mono);font-size:13px;letter-spacing:.1em;padding:12px;border-radius:10px;cursor:pointer;border:1px solid var(--photon);background:rgba(111,211,255,.12);color:var(--photon);transition:.2s;margin-top:4px}
+  .btn:hover:not(:disabled){background:rgba(111,211,255,.2)}
+  .btn:disabled{opacity:.3;cursor:not-allowed;border-color:var(--line);color:var(--muted);background:transparent}
+  .mini{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:8px;line-height:1.6}
+
+  .res{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border-radius:10px;overflow:hidden;border:1px solid var(--line);margin-top:2px}
+  .res .c{background:rgba(10,13,26,.85);padding:11px 12px}
+  .res .c.full{grid-column:1/-1}
+  .res .k{font-size:11px;color:var(--muted);margin-bottom:4px}
+  .res .v{font-family:var(--mono);font-size:14.5px;color:var(--ink)}
+  .res .v.cap{color:var(--crit)} .res .v.esc{color:var(--photon)} .res .v.orb{color:var(--gold)}
+
+  footer{max-width:1280px;margin:0 auto;padding:6px 26px 50px;font-family:var(--mono);font-size:11px;color:var(--faint);line-height:1.85}
+  footer b{color:var(--muted)} sup{font-size:.72em}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <span class="kicker">General Relativity · Null & Timelike Geodesics</span>
+    <h1>黑洞<em>測地線</em>發射器</h1>
+    <span class="sub">從固定點射出粒子，看時空曲率如何彎折它的路徑。</span>
+  </div>
+  <div class="eq" title="u=1/r；光子的軌道方程。有質量粒子右側另加 GM/h² 項">d²u/dφ² + u = <b>3GM u²/c²</b>（光子）</div>
+</header>
+
+<main>
+  <section class="stage">
+    <canvas id="cv" width="900" height="900"></canvas>
+    <div class="ovl" id="ovl"><div>
+      <div class="big">尚未塌縮成黑洞</div>
+      <div class="small">這個模擬只在天體落入自身史瓦西半徑（R ≤ r<sub>s</sub>）後才開放發射。<br>請調整「黑洞設定」的質量／半徑，或直接按下方按鈕。</div>
+      <button class="btn" id="ovlCollapse" style="margin-top:14px;border-color:var(--crit);color:var(--crit);background:rgba(255,122,92,.1)">⤵ 壓縮成黑洞</button>
+    </div></div>
+  </section>
+
+  <section class="controls">
+    <div class="card">
+      <h2><span>黑洞設定</span><span class="g">SOURCE</span></h2>
+      <div class="status" id="status"><span class="dot"></span><span id="statusTxt">非黑洞</span></div>
+
+      <div class="ctl">
+        <div class="row"><label>質量 M</label><span class="val" id="mVal">10³⁰·³ kg</span></div>
+        <input id="mSld" class="mass" type="range" min="20" max="45" step="0.01" value="30.3">
+      </div>
+      <div class="ctl">
+        <div class="row"><label>半徑 R</label><span class="val" id="rVal">10⁸·⁸ m</span></div>
+        <input id="rSld" class="rad" type="range" min="-2" max="15" step="0.01" value="8.8">
+      </div>
+      <button class="btn" id="collapse" style="border-color:var(--crit);color:var(--crit);background:rgba(255,122,92,.1)">⤵ 壓縮成黑洞</button>
+      <div class="mini" id="rsInfo"></div>
+    </div>
+
+    <div class="card">
+      <h2><span>入射物體</span><span class="g">PROJECTILE</span></h2>
+
+      <div class="ctl">
+        <div class="row"><label>類型</label><span class="val" id="typeVal">光子 (m = 0)</span></div>
+        <div class="seg" id="typeSeg">
+          <button class="on" data-t="photon">光子 m=0</button>
+          <button data-t="massive" class="m">有質量 m&gt;0</button>
+        </div>
+      </div>
+
+      <div class="ctl" id="spdCtl">
+        <div class="row"><label>入射速度 v</label><span class="val" id="vVal">— (光速 c)</span></div>
+        <input id="vSld" class="spd" type="range" min="0.02" max="0.99" step="0.01" value="0.5" disabled>
+      </div>
+
+      <div class="ctl">
+        <div class="row"><label>入射角 θ <span style="color:var(--faint);font-weight:400">（離準心方向）</span></label><span class="val" id="aVal">30°</span></div>
+        <input id="aSld" class="ang" type="range" min="0" max="90" step="0.5" value="30">
+      </div>
+
+      <button class="btn" id="launch">▶ 發射</button>
+      <div class="mini">θ = 0° 正對黑洞中心；θ 越大越偏。初始位置固定在中心左方 10 r<sub>s</sub> 處。快捷鍵：空白鍵 發射。</div>
+    </div>
+
+    <div class="card">
+      <h2><span>結果</span><span class="g">OUTCOME</span></h2>
+      <div class="res" id="res"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <b>建模</b>　史瓦西赤道面測地線，固有時／仿射參數積分（RK4）：d²r/dp² = −μGM/r² + L²/r³ − 3GML²/(c²r⁴)，μ=1 有質量、μ=0 光子。守恆量 E、L 由初速與初角設定。<br>
+  <b>關鍵物理</b>　光子捕獲臨界撞擊參數 b<sub>crit</sub> = (3√3/2) r<sub>s</sub> ≈ 2.598 r<sub>s</sub>；b 小於此值必被吞噬，等於此值會纏繞光子球（1.5 r<sub>s</sub>）。試驗粒子的<b>軌跡與其質量數值無關</b>（等效原理）——有質量時唯一可調的是速度；軌跡形狀也只取決於 r/r<sub>s</sub>、速度與 b，與黑洞絕對質量無關（質量只決定 r<sub>s</sub> 的實際公尺數）。<br>
+  <b>注意</b>　以粒子自身參數作圖，故能畫出穿越視界；外部座標時間在視界附近發散（遠方觀者永遠看不到它真正落入）。
+</footer>
+
+<script>
+"use strict";
+const G=6.67430e-11, C=2.99792458e8;
+const $=id=>document.getElementById(id);
+const SUP={"0":"⁰","1":"¹","2":"²","3":"³","4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹","-":"⁻",".":"·"};
+const sup=s=>String(s).split("").map(c=>SUP[c]||c).join("");
+function sci(x,sig=3){
+  if(!isFinite(x))return "∞"; if(x===0)return "0";
+  const n=x<0; x=Math.abs(x); let e=Math.floor(Math.log10(x)); let m=x/Math.pow(10,e);
+  m=parseFloat(m.toFixed(sig-1)); if(m>=10){m/=10;e++;}
+  if(e>=-2&&e<=3) return parseFloat(((n?-1:1)*m*Math.pow(10,e)).toPrecision(sig)).toString();
+  return `${n?"-":""}${m.toFixed(sig-1)}×10${sup(e)}`;
+}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+// ── 狀態 ──
+const S={ logM:30.3, logR:8.8, type:"photon", v:0.5, angle:30 };
+
+// ── 幾何單位積分器（M=1, r_s=2M） ──
+const Mg=1, RS=2*Mg, BCRIT=3*Math.sqrt(3)*Mg; // b_crit = 3√3 M = 2.598 r_s
+const R0=20*Mg;                                 // 固定初始位置 = 10 r_s
+const FAR=30*RS;                                // 逃逸判定距離
+
+function deriv(s,L,mu){const r=s[0];return [s[2], L/(r*r), -mu*Mg/(r*r)+L*L/(r*r*r)-3*Mg*L*L/(r*r*r*r)];}
+function rk4(s,L,mu,h){
+  const a=deriv(s,L,mu);
+  const b=deriv([s[0]+.5*h*a[0],s[1]+.5*h*a[1],s[2]+.5*h*a[2]],L,mu);
+  const c=deriv([s[0]+.5*h*b[0],s[1]+.5*h*b[1],s[2]+.5*h*b[2]],L,mu);
+  const d=deriv([s[0]+h*c[0],s[1]+h*c[1],s[2]+h*c[2]],L,mu);
+  return [0,1,2].map(i=>s[i]+h/6*(a[i]+2*b[i]+2*c[i]+d[i]));
+}
+// 計算整條軌跡（回傳 r_s 單位的點陣列 + 結果）
+function trajectory(){
+  const isP = S.type==="photon";
+  const f0=1-RS/R0, th=S.angle*Math.PI/180;
+  const v = isP?1:S.v;
+  const g = isP?1:1/Math.sqrt(1-v*v);
+  const E = Math.sqrt(f0)*g;
+  const L = -(R0*g*v*Math.sin(th));            // 負號 → 向上偏（視覺）
+  const mu= isP?0:1;
+  let s=[R0, Math.PI, -Math.sqrt(f0)*g*v*Math.cos(th)];
+  const pts=[]; let dphi=0,n=0,captured=false,escaped=false,bound=(!isP&&E<1);
+  pushPt(pts,s);
+  while(n<120000){
+    const r=s[0];
+    const h=Math.max(2e-4, Math.min(0.4, 0.018*r*r/Math.max(Math.abs(L),0.4)));
+    const ns=rk4(s,L,mu,h); dphi+=Math.abs(ns[1]-s[1]); s=ns; n++;
+    if(n%3===0) pushPt(pts,s);
+    if(s[0]<=RS*1.001){captured=true;pushPt(pts,[RS,s[1],s[2]]);break;}
+    if(s[0]>=FAR && s[2]>0 && !bound){escaped=true;break;}
+    if(dphi> (bound?8*Math.PI:14*Math.PI)) break;
+  }
+  // 偏折角（逃逸時）：末速向量 vs 初速向量
+  let deflect=null;
+  if(pts.length>4){
+    const v0=[pts[1].x-pts[0].x, pts[1].y-pts[0].y];
+    const k=pts.length-1;
+    const vf=[pts[k].x-pts[k-1].x, pts[k].y-pts[k-1].y];
+    const a0=Math.atan2(v0[1],v0[0]), af=Math.atan2(vf[1],vf[0]);
+    let d=Math.abs(af-a0); if(d>Math.PI)d=2*Math.PI-d; deflect=d*180/Math.PI;
+  }
+  // 近心點進動（束縛時）
+  let precess=null, peris=[];
+  for(let i=2;i<pts.length-1;i++){ if(pts[i].r<pts[i-1].r && pts[i].r<=pts[i+1].r) peris.push(pts[i].phi); }
+  if(peris.length>=2){ precess=(Math.abs(peris[1]-peris[0])-2*Math.PI)*180/Math.PI; }
+  return {pts, E, L:Math.abs(L), b:Math.abs(L)/E, captured, escaped, bound, isP, deflect, precess, dphi};
+}
+function pushPt(arr,s){ const r=s[0]/RS; arr.push({x:r*Math.cos(s[1]), y:r*Math.sin(s[1]), r:s[0], phi:s[1]}); }
+
+// ── 物理（公尺）：是否黑洞 + r_s ──
+function rsMeters(M){return 2*G*M/(C*C);}
+function isBlackHole(){ const M=Math.pow(10,S.logM),R=Math.pow(10,S.logR); return R<=rsMeters(M); }
+
+// ── Canvas ──
+const cv=$("cv"),ctx=cv.getContext("2d");
+let W=900,H=900,PX=24,cx=450,cy=450;          // PX = 每 r_s 像素
+const VIEW=11;                                 // 視野半寬（r_s）
+function resize(){
+  const rect=cv.getBoundingClientRect(); const dpr=Math.min(devicePixelRatio||1,2);
+  W=Math.round(rect.width);H=W; cv.width=W*dpr;cv.height=H*dpr;cv.style.height=W+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0); cx=W/2;cy=H/2; PX=(W/2)/VIEW;
+}
+addEventListener("resize",resize);
+const X=rx=>cx+rx*PX, Y=ry=>cy-ry*PX;          // r_s 單位 → 像素（y 上正）
+
+let path=null, head=0, playing=false;
+function recompute(){ if(isBlackHole()) path=trajectory(); else path=null; head=0; }
+
+function drawScene(){
+  ctx.clearRect(0,0,W,H);
+  // 背景
+  const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,W*0.7);
+  bg.addColorStop(0,"#0a0e1a");bg.addColorStop(1,"#06070d");
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  // 格線（每 r_s）
+  ctx.lineWidth=1; ctx.strokeStyle="rgba(120,150,210,0.06)";
+  for(let i=-VIEW;i<=VIEW;i++){ if(i===0)continue;
+    ctx.beginPath();ctx.moveTo(X(i),0);ctx.lineTo(X(i),H);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,Y(i));ctx.lineTo(W,Y(i));ctx.stroke();
+  }
+  const bh=isBlackHole();
+  if(!bh){ return; }
+
+  // 參考圈：ISCO 3r_s、b_crit 2.598、光子球 1.5
+  refCircle(3, "rgba(160,255,210,0.30)","3 r_s · ISCO",[2,6]);
+  refCircle(2.598,"rgba(255,170,120,0.40)","2.6 r_s · 光子捕獲界",[4,5]);
+  refCircle(1.5,"rgba(120,200,255,0.45)","1.5 r_s · 光子球",[2,5]);
+
+  // 事件視界（純黑 2D 圓 + 細邊）
+  ctx.beginPath();ctx.arc(cx,cy,PX,0,7);ctx.fillStyle="#000";ctx.fill();
+  ctx.lineWidth=2;ctx.strokeStyle="rgba(255,140,90,0.85)";ctx.stroke();
+  ctx.fillStyle="rgba(255,150,120,0.8)";ctx.font="11px 'IBM Plex Mono'";
+  ctx.fillText("r_s", cx-9, cy+PX+15);
+
+  // 軌跡
+  if(path){
+    const col=path.isP?"111,211,255":"255,176,77";
+    // 全路徑（暗）
+    ctx.lineWidth=1.5;ctx.strokeStyle=`rgba(${col},0.28)`;
+    ctx.beginPath();
+    path.pts.forEach((p,i)=>{const px=X(p.x),py=Y(p.y); i?ctx.lineTo(px,py):ctx.moveTo(px,py);});
+    ctx.stroke();
+    // 已飛過的亮段
+    const k=Math.min(head,path.pts.length-1);
+    ctx.lineWidth=2.4;ctx.strokeStyle=`rgba(${col},0.95)`;
+    ctx.beginPath();
+    for(let i=0;i<=k;i++){const p=path.pts[i],px=X(p.x),py=Y(p.y);i?ctx.lineTo(px,py):ctx.moveTo(px,py);}
+    ctx.stroke();
+    // 起點 + 初速箭頭
+    const s0=path.pts[0];
+    drawArrow(s0, path.pts[Math.min(8,path.pts.length-1)], col);
+    ctx.beginPath();ctx.arc(X(s0.x),Y(s0.y),4,0,7);ctx.fillStyle=`rgba(${col},1)`;ctx.fill();
+    ctx.fillStyle="rgba(200,210,235,0.7)";ctx.font="10px 'IBM Plex Mono'";
+    ctx.fillText("起點 10 r_s", X(s0.x)-4, Y(s0.y)-12);
+    // 移動中的粒子
+    const p=path.pts[k];
+    ctx.beginPath();ctx.arc(X(p.x),Y(p.y),5,0,7);
+    ctx.fillStyle=`rgba(${col},1)`;ctx.shadowColor=`rgba(${col},0.9)`;ctx.shadowBlur=12;ctx.fill();ctx.shadowBlur=0;
+  }
+}
+function refCircle(rRs,color,label,dash){
+  ctx.save();ctx.setLineDash(dash);ctx.lineWidth=1;ctx.strokeStyle=color;
+  ctx.beginPath();ctx.arc(cx,cy,rRs*PX,0,7);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle=color;ctx.font="9.5px 'IBM Plex Mono'";
+  ctx.fillText(label, cx+rRs*PX*0.7, cy-rRs*PX*0.7);
+  ctx.restore();
+}
+function drawArrow(a,b,col){
+  const x1=X(a.x),y1=Y(a.y); let dx=X(b.x)-x1,dy=Y(b.y)-y1; const len=Math.hypot(dx,dy)||1;
+  dx/=len;dy/=len; const L=34, ex=x1+dx*L,ey=y1+dy*L;
+  ctx.strokeStyle=`rgba(${col},0.9)`;ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(ex,ey);ctx.stroke();
+  const ah=6;
+  ctx.beginPath();ctx.moveTo(ex,ey);
+  ctx.lineTo(ex-ah*(dx*0.7-dy*0.7),ey-ah*(dy*0.7+dx*0.7));
+  ctx.lineTo(ex-ah*(dx*0.7+dy*0.7),ey-ah*(dy*0.7-dx*0.7));
+  ctx.closePath();ctx.fillStyle=`rgba(${col},0.9)`;ctx.fill();
+}
+
+function loop(){
+  if(playing && path){
+    head+=Math.max(2,Math.floor(path.pts.length/180));
+    if(head>=path.pts.length-1){head=path.pts.length-1;playing=false;}
+  }
+  drawScene();
+  requestAnimationFrame(loop);
+}
+
+// ── 結果面板 ──
+function showResult(){
+  const r=$("res");
+  if(!path){ r.innerHTML=`<div class="c full"><div class="k">狀態</div><div class="v">— 尚未發射</div></div>`; return; }
+  let outcome,cls;
+  if(path.captured){outcome="墜入事件視界（被捕獲）";cls="cap";}
+  else if(path.bound && !path.escaped){outcome="束縛軌道";cls="orb";}
+  else {outcome="偏折後逃逸";cls="esc";}
+  const cells=[
+    {k:"結果", v:outcome, cls, full:true},
+    {k:"撞擊參數 b", v:`${sci(path.b/2)} r_s`},   // b(M單位)/2 = b in r_s
+    {k:path.isP?"光子臨界 b_crit":"能量 E (每單位質量)", v:path.isP?`2.598 r_s`:`${sci(path.E,4)} ${path.E<1?"(束縛)":"(非束縛)"}`},
+    {k:"角動量 L", v:`${sci(path.L)} ×GM/c`},
+    {k:"繞行總角度 Δφ", v:`${sci(path.dphi/Math.PI)} π`},
+  ];
+  if(path.escaped && path.deflect!=null) cells.push({k:"偏折角",v:`${sci(path.deflect)}°`,full:true});
+  if(path.bound && path.precess!=null) cells.push({k:"近心點進動 / 圈",v:`${sci(path.precess)}°`,full:true});
+  r.innerHTML=cells.map(c=>`<div class="c ${c.full?'full':''}"><div class="k">${c.k}</div><div class="v ${c.cls||''}">${c.v}</div></div>`).join("");
+}
+
+// ── UI ──
+function refreshUI(){
+  $("mVal").innerHTML="10"+sup(S.logM.toFixed(1))+" kg";
+  $("rVal").innerHTML="10"+sup(S.logR.toFixed(1))+" m";
+  const bh=isBlackHole(), M=Math.pow(10,S.logM);
+  $("status").classList.toggle("bh",bh);
+  $("statusTxt").textContent= bh?"黑洞 · 可發射":"非黑洞 · 無法發射";
+  $("rsInfo").innerHTML=`史瓦西半徑 r<sub>s</sub> = ${sci(rsMeters(M))} m　·　目前 R/r<sub>s</sub> = ${sci(Math.pow(10,S.logR)/rsMeters(M))}`;
+  $("ovl").classList.toggle("hide",bh);
+  $("launch").disabled=!bh;
+  $("typeVal").textContent = S.type==="photon"?"光子 (m = 0)":"有質量粒子 (m > 0)";
+  $("vVal").textContent = S.type==="photon"?"— (光速 c)":S.v.toFixed(2)+" c";
+  $("vSld").disabled = S.type==="photon";
+  $("aVal").textContent = S.angle+"°";
+  recompute(); showResult();
+}
+
+$("mSld").oninput=e=>{S.logM=+e.target.value;refreshUI();};
+$("rSld").oninput=e=>{S.logR=+e.target.value;refreshUI();};
+$("vSld").oninput=e=>{S.v=+e.target.value;refreshUI();};
+$("aSld").oninput=e=>{S.angle=+e.target.value;refreshUI();};
+$("collapse").onclick=()=>{ // 把半徑壓到 0.3 r_s
+  const rs=rsMeters(Math.pow(10,S.logM)); S.logR=clamp(Math.log10(rs*0.3),-2,15);
+  $("rSld").value=S.logR; refreshUI();
+};
+$("typeSeg").onclick=e=>{const b=e.target.closest("button");if(!b)return;
+  S.type=b.dataset.t;
+  [...$("typeSeg").children].forEach(x=>x.classList.toggle("on",x===b));
+  refreshUI();
+};
+$("ovlCollapse").onclick=()=>$("collapse").click();
+const launch=()=>{ if(!isBlackHole())return; recompute(); head=0; playing=true; showResult(); };
+$("launch").onclick=launch;
+addEventListener("keydown",e=>{ if(e.code==="Space" && !/BUTTON/.test(e.target.tagName)){ e.preventDefault(); launch(); } });
+
+resize(); refreshUI(); requestAnimationFrame(loop);
+</script>
+</body>
+</html>

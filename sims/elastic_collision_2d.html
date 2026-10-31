@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>二維彈性碰撞模擬</title>
+<style>
+:root{
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",sans-serif;
+  --color-text-primary:#2c2c2a; --color-text-secondary:#5f5e5a;
+  --color-border-tertiary:rgba(0,0,0,.14); --color-border-secondary:rgba(0,0,0,.28);
+  --color-background-primary:#ffffff; --color-background-secondary:#efece3;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f5f0e8;font-family:var(--font-sans);color:var(--color-text-primary)}
+.wrap{background:#f5f0e8;padding:12px;max-width:980px;margin:0 auto}
+button:focus-visible,input:focus-visible{outline:2px solid #185fa5;outline-offset:2px}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:640px){.pgrid{grid-template-columns:1fr}}
+.kbd{font-size:10.5px;color:var(--color-text-secondary);margin-top:6px;text-align:center}
+h1{text-align:center;font-size:18px;font-weight:500;color:var(--color-text-primary);margin-bottom:10px}
+.top-panel{background:#fff;border-radius:12px;border:0.5px solid var(--color-border-tertiary);padding:10px;margin-bottom:12px}
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.stat-card{background:#f8f6f0;border-radius:8px;padding:6px 10px;transition:opacity 0.2s}
+.stat-card.disabled{opacity:0.35}
+.stat-title{font-size:11px;color:var(--color-text-secondary);margin-bottom:2px;font-weight:500;display:flex;align-items:center;gap:6px}
+.stat-val{font-size:12px;color:var(--color-text-primary)}
+.canvas-row{display:flex;gap:8px;align-items:flex-start}
+canvas{border-radius:8px;border:0.5px solid var(--color-border-tertiary);background:#fdfaf4;flex:1;display:block;width:100%;height:auto;aspect-ratio:510/265}
+.ctrl-col{display:flex;flex-direction:row;gap:6px}
+.stats-header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.stats-header .btn{padding:5px 12px;font-size:12px}
+.btn{border:0.5px solid var(--color-border-secondary);background:transparent;border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;color:var(--color-text-primary);display:flex;align-items:center;gap:5px}
+.btn:hover{background:var(--color-background-secondary)}
+.btn:active{transform:scale(0.98)}
+.stats-panel{background:#fff;border-radius:12px;border:0.5px solid var(--color-border-tertiary);padding:12px;margin-top:8px}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stats-group{background:#f8f6f0;border-radius:8px;padding:9px 11px}
+.stats-group .grp-title{font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px}
+.energy-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:2px 0}
+.energy-row .lbl{font-size:11px;color:var(--color-text-secondary);font-weight:500;white-space:nowrap}
+.energy-row .val{font-size:12px;color:var(--color-text-primary);font-weight:500;text-align:right}
+.energy-row.total{border-bottom:0.5px solid var(--color-border-tertiary);padding-bottom:5px;margin-bottom:3px}
+.energy-row.total .val{font-size:13px;color:#185fa5}
+@media(max-width:640px){.stats-grid{grid-template-columns:1fr}}
+.bottom-panel{background:#fff;border-radius:12px;border:0.5px solid var(--color-border-tertiary);padding:12px}
+.section-title{font-size:14px;font-weight:500;color:var(--color-text-primary);margin-bottom:8px;border-bottom:0.5px solid var(--color-border-tertiary);padding-bottom:5px}
+.input-box{border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px;margin-bottom:8px;transition:opacity 0.2s}
+.input-box.disabled{opacity:0.4;pointer-events:none}
+.box-title{font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:7px;display:flex;align-items:center;justify-content:space-between}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.field{display:flex;flex-direction:column;gap:2px}
+.field label{font-size:11px;color:var(--color-text-secondary)}
+.field input{border:0.5px solid var(--color-border-tertiary);border-radius:6px;padding:4px 7px;font-size:12px;color:var(--color-text-primary);background:var(--color-background-primary);width:100%}
+.computed{font-size:11px;color:var(--color-text-secondary);background:var(--color-background-secondary);border-radius:4px;padding:2px 6px;margin-top:1px}
+.global-box{border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:#f8f6f0}
+.apply-btn{border:0.5px solid var(--color-border-secondary);background:transparent;border-radius:8px;padding:6px 18px;font-size:13px;cursor:pointer;color:var(--color-text-primary);margin-top:8px;width:100%}
+.apply-btn:hover{background:var(--color-background-secondary)}
+.warn{font-size:11px;color:#993c1d;background:#faece7;border-radius:6px;padding:3px 8px;margin-top:4px;display:none}
+.coord-hint{font-size:10px;color:var(--color-text-secondary);margin-bottom:5px}
+.b1{color:#c85a30;font-weight:500}
+.b2{color:#185fa5;font-weight:500}
+
+/* Toggle switch */
+.toggle-wrap{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+.toggle-wrap span{font-size:11px;color:var(--color-text-secondary)}
+.toggle{position:relative;width:32px;height:18px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.track{position:absolute;inset:0;border-radius:18px;background:#ccc;transition:background 0.2s;border:0.5px solid #bbb}
+.toggle input:checked ~ .track{background:#4a9e6b;border-color:#3a8a5a}
+.thumb{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform 0.2s;box-shadow:0 1px 2px rgba(0,0,0,0.2)}
+.toggle input:checked ~ .track ~ .thumb{transform:translateX(14px)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h2 class="sr-only" style="position:absolute;left:-9999px">二維彈性碰撞模擬器</h2>
+<h1>二維彈性碰撞模擬</h1>
+
+<div class="top-panel">
+  <div class="stats-row">
+    <div class="stat-card" id="card1">
+      <div class="stat-title">
+        🔴 球一
+        <label class="toggle-wrap" title="啟用/停用球一">
+          <div class="toggle">
+            <input type="checkbox" id="active1" checked>
+            <div class="track"></div>
+            <div class="thumb"></div>
+          </div>
+          <span id="lbl1">啟用</span>
+        </label>
+      </div>
+      <div class="stat-val" id="s1">速率: — m/s | 角度: — ° | 角速度: — °/s</div>
+    </div>
+    <div class="stat-card" id="card2">
+      <div class="stat-title">
+        🔵 球二
+        <label class="toggle-wrap" title="啟用/停用球二">
+          <div class="toggle">
+            <input type="checkbox" id="active2" checked>
+            <div class="track"></div>
+            <div class="thumb"></div>
+          </div>
+          <span id="lbl2">啟用</span>
+        </label>
+      </div>
+      <div class="stat-val" id="s2">速率: — m/s | 角度: — ° | 角速度: — °/s</div>
+    </div>
+  </div>
+  <div class="canvas-row">
+    <canvas id="simCanvas" width="510" height="265"></canvas>
+  </div>
+
+  <div class="stats-panel">
+    <div class="section-title stats-header">
+      <span>系統狀態</span>
+      <div class="ctrl-col">
+        <button class="btn" id="pauseBtn"><span id="pauseIcon" aria-hidden="true">⏸</span><span id="pauseLabel">暫停</span></button>
+        <button class="btn" id="resetBtn"><span aria-hidden="true">↻</span>重置</button>
+      </div>
+    </div>
+    <div class="stats-grid">
+
+      <div class="stats-group">
+        <div class="grp-title">動能</div>
+        <div class="energy-row total">
+          <span class="lbl">系統總動能</span>
+          <span class="val" id="keTotal">— J</span>
+        </div>
+        <div class="energy-row">
+          <span class="lbl">移動動能</span>
+          <span class="val" id="keTrans">— J</span>
+        </div>
+        <div class="energy-row">
+          <span class="lbl">轉動動能</span>
+          <span class="val" id="keRot">— J</span>
+        </div>
+      </div>
+
+      <div class="stats-group">
+        <div class="grp-title">移動動量</div>
+        <div class="energy-row total">
+          <span class="lbl">系統總動量</span>
+          <span class="val" id="pTotal">— kg·m/s</span>
+        </div>
+        <div class="energy-row">
+          <span class="lbl"><span class="b1">●</span> 球一</span>
+          <span class="val" id="p1">— kg·m/s</span>
+        </div>
+        <div class="energy-row">
+          <span class="lbl"><span class="b2">●</span> 球二</span>
+          <span class="val" id="p2">— kg·m/s</span>
+        </div>
+      </div>
+
+      <div class="stats-group">
+        <div class="grp-title">角動量 L（參考點：左下角原點）</div>
+        <div class="energy-row total">
+          <span class="lbl">系統總角動量</span>
+          <span class="val" id="lTotal">— kg·m²/s</span>
+        </div>
+        <div class="energy-row">
+          <span class="lbl"><span class="b1">●</span> 球一</span>
+          <span class="val" id="l1">— kg·m²/s</span>
+        </div>
+        <div class="energy-row">
+          <span class="lbl"><span class="b2">●</span> 球二</span>
+          <span class="val" id="l2">— kg·m²/s</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="bottom-panel">
+  <div class="section-title">參數設定</div>
+
+  <div class="global-box">
+    <div class="box-title" style="font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:7px">全域碰撞參數</div>
+    <div class="grid2">
+      <div class="field">
+        <label>彈性係數 e（球—球法向與牆面；0 = 完全非彈性，1 = 完全彈性）</label>
+        <input type="number" id="restitution" value="1.0" min="0" max="1" step="0.05">
+      </div>
+      <div class="field">
+        <label>兩顆球體間之摩擦係數 μ（0 = 無摩擦）</label>
+        <input type="number" id="muPair" value="0.3" min="0" max="1" step="0.05">
+      </div>
+    </div>
+  </div>
+
+  <div class="pgrid">
+
+    <div class="input-box" id="box1">
+      <div class="box-title">
+        <span class="b1">● 球一</span> 物理屬性
+        <label class="toggle-wrap">
+          <div class="toggle"><input type="checkbox" id="active1b" checked><div class="track"></div><div class="thumb"></div></div>
+          <span id="lbl1b" style="font-weight:400">啟用</span>
+        </label>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>半徑 (m)</label><input type="number" id="r1" value="0.5" min="0.1" max="3.5" step="0.05"></div>
+        <div class="field"><label>質量 (kg)</label><input type="number" id="m1" value="2" min="0.1" max="20" step="0.1"></div>
+        <div class="field"><label>轉動慣量</label><div class="computed" id="I1">—</div></div>
+      </div>
+    </div>
+
+    <div class="input-box" id="box2">
+      <div class="box-title">
+        <span class="b2">● 球二</span> 物理屬性
+        <label class="toggle-wrap">
+          <div class="toggle"><input type="checkbox" id="active2b" checked><div class="track"></div><div class="thumb"></div></div>
+          <span id="lbl2b" style="font-weight:400">啟用</span>
+        </label>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>半徑 (m)</label><input type="number" id="r2" value="0.4" min="0.1" max="3.5" step="0.05"></div>
+        <div class="field"><label>質量 (kg)</label><input type="number" id="m2" value="1.5" min="0.1" max="20" step="0.1"></div>
+        <div class="field"><label>轉動慣量</label><div class="computed" id="I2">—</div></div>
+      </div>
+    </div>
+
+    <div class="input-box" id="box1b">
+      <div class="box-title"><span class="b1">● 球一</span> 初始位置與運動</div>
+      <div class="coord-hint">座標原點在畫面左下角，X 向右、Y 向上（單位：m）</div>
+      <div class="grid3" style="margin-bottom:6px">
+        <div class="field"><label>位置 X (m)</label><input type="number" id="x1" value="1.0" step="0.1"></div>
+        <div class="field"><label>位置 Y (m)</label><input type="number" id="y1" value="2.2" step="0.1"></div>
+        <div class="field"><label style="visibility:hidden">–</label><div class="computed" id="pos1_disp" style="margin-top:6px">(1.0, 2.2)</div></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>速度 (m/s)</label><input type="number" id="v1" value="4" min="0" max="20" step="0.5"></div>
+        <div class="field"><label>方向 (°)</label><input type="number" id="a1" value="0" min="-180" max="180" step="5"></div>
+        <div class="field" style="grid-column:1/-1"><label>初始角速度 (°/s，逆時針為正)</label><input type="number" id="w1" value="30" min="-720" max="720" step="10"></div>
+      </div>
+      <div class="warn" id="warn1">位置超出邊界或與球二重疊，已自動修正</div>
+    </div>
+
+    <div class="input-box" id="box2b">
+      <div class="box-title"><span class="b2">● 球二</span> 初始位置與運動</div>
+      <div class="coord-hint">座標原點在畫面左下角，X 向右、Y 向上（單位：m）</div>
+      <div class="grid3" style="margin-bottom:6px">
+        <div class="field"><label>位置 X (m)</label><input type="number" id="x2" value="5.5" step="0.1"></div>
+        <div class="field"><label>位置 Y (m)</label><input type="number" id="y2" value="2.2" step="0.1"></div>
+        <div class="field"><label style="visibility:hidden">–</label><div class="computed" id="pos2_disp" style="margin-top:6px">(5.5, 2.2)</div></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>速度 (m/s)</label><input type="number" id="v2" value="0" min="0" max="20" step="0.5"></div>
+        <div class="field"><label>方向 (°)</label><input type="number" id="a2" value="0" min="-180" max="180" step="5"></div>
+        <div class="field" style="grid-column:1/-1"><label>初始角速度 (°/s，逆時針為正)</label><input type="number" id="w2" value="0" min="-720" max="720" step="10"></div>
+      </div>
+      <div class="warn" id="warn2">位置超出邊界或與球一重疊，已自動修正</div>
+    </div>
+
+  </div>
+  <button class="apply-btn" id="applyBtn">▶ 套用並重新模擬</button>
+  <div class="kbd">修改參數後離開欄位（Tab／Enter）即自動重新模擬 · 空白鍵 暫停／繼續</div>
+</div>
+</div>
+
+<script>
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+
+// 模擬世界以「公尺」為基準，固定為 8.5m x 4.4167m（維持原 510/265 比例）
+const WM = 510 / 60;          // 世界寬度（公尺）
+const HM = 265 / 60;          // 世界高度（公尺）
+let W, H, SCALE, dpr = 1;     // 像素寬高、每公尺像素數、裝置像素比
+
+function resizeCanvas(){
+  dpr = window.devicePixelRatio || 1;
+  // CSS 顯示尺寸（由 flex / width:100% 決定）
+  const cssW = canvas.clientWidth || 510;
+  const cssH = cssW * (HM / WM);
+  // 繪圖緩衝區用實際像素，避免模糊
+  canvas.width  = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  // 邏輯座標仍以 CSS 像素為單位
+  W = cssW;
+  H = cssH;
+  SCALE = W / WM;             // 每公尺對應的像素數，隨寬度縮放
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resizeCanvas();
+
+let paused = false, animId = null, lastTime = null;
+let ball1, ball2;
+
+function gv(id){ return parseFloat(document.getElementById(id).value); }
+function gc(id){ return document.getElementById(id).checked; }
+
+// Keep both toggles in sync (stat card ↔ input panel)
+function syncToggles(){
+  const a1 = gc('active1');
+  document.getElementById('active1b').checked = a1;
+  const a2 = gc('active2');
+  document.getElementById('active2b').checked = a2;
+  startSim();
+}
+function syncTogglesB(){
+  const a1 = gc('active1b');
+  document.getElementById('active1').checked = a1;
+  const a2 = gc('active2b');
+  document.getElementById('active2').checked = a2;
+  startSim();
+}
+
+function applyToggleUI(){
+  const a1 = gc('active1');
+  const a2 = gc('active2');
+  document.getElementById('lbl1').textContent  = a1 ? '啟用' : '停用';
+  document.getElementById('lbl1b').textContent = a1 ? '啟用' : '停用';
+  document.getElementById('lbl2').textContent  = a2 ? '啟用' : '停用';
+  document.getElementById('lbl2b').textContent = a2 ? '啟用' : '停用';
+  document.getElementById('card1').classList.toggle('disabled', !a1);
+  document.getElementById('card2').classList.toggle('disabled', !a2);
+  document.getElementById('box1').classList.toggle('disabled', !a1);
+  document.getElementById('box1b').classList.toggle('disabled', !a1);
+  document.getElementById('box2').classList.toggle('disabled', !a2);
+  document.getElementById('box2b').classList.toggle('disabled', !a2);
+  document.getElementById('s1').textContent = a1
+    ? document.getElementById('s1').textContent
+    : '（未加入模擬）';
+  document.getElementById('s2').textContent = a2
+    ? document.getElementById('s2').textContent
+    : '（未加入模擬）';
+}
+
+function updateMoments(){
+  const r1=gv('r1')||0.5, m1=gv('m1')||2;
+  const r2=gv('r2')||0.4, m2=gv('m2')||1.5;
+  document.getElementById('I1').textContent=(0.4*m1*r1*r1).toFixed(4)+' kg·m²';
+  document.getElementById('I2').textContent=(0.4*m2*r2*r2).toFixed(4)+' kg·m²';
+}
+
+function updatePosDisplay(){
+  const x1=isNaN(gv('x1'))?'?':gv('x1').toFixed(1);
+  const y1=isNaN(gv('y1'))?'?':gv('y1').toFixed(1);
+  const x2=isNaN(gv('x2'))?'?':gv('x2').toFixed(1);
+  const y2=isNaN(gv('y2'))?'?':gv('y2').toFixed(1);
+  document.getElementById('pos1_disp').textContent=`(${x1}, ${y1})`;
+  document.getElementById('pos2_disp').textContent=`(${x2}, ${y2})`;
+}
+
+function mToPx(xm,ym){ return [xm*SCALE, H-ym*SCALE]; }
+function pxToM(xpx,ypx){ return [xpx/SCALE, (H-ypx)/SCALE]; }
+
+function clampPos(xm,ym,rm){
+  return [Math.max(rm, Math.min(WM-rm, xm)), Math.max(rm, Math.min(HM-rm, ym))];
+}
+
+function makeBall(xm,ym,rm,m,vspd,arad,wrad,color){
+  const [px,py]=mToPx(xm,ym);
+  return {
+    x:px, y:py,
+    vx:vspd*Math.cos(arad)*SCALE, vy:-vspd*Math.sin(arad)*SCALE,
+    omega:-wrad,                 // 內部採畫布座標(y 向下)：順時針為正；使用者輸入以逆時針為正，故取負
+    r:rm*SCALE, m,
+    I:0.4*m*rm*rm, rpx:rm,
+    angle:0, color
+  };
+}
+
+function initBalls(){
+  const r1  = gv('r1')||0.5,  m1  = gv('m1')||2;
+  const r2  = gv('r2')||0.4,  m2  = gv('m2')||1.5;
+  const v1  = isNaN(gv('v1'))?4:gv('v1'),   a1=(isNaN(gv('a1'))?0:gv('a1'))*Math.PI/180,  w1=(isNaN(gv('w1'))?30:gv('w1'))*Math.PI/180;
+  const v2  = isNaN(gv('v2'))?0:gv('v2'),   a2=(isNaN(gv('a2'))?0:gv('a2'))*Math.PI/180,  w2=(isNaN(gv('w2'))?0:gv('w2'))*Math.PI/180;
+  let x1m = isNaN(gv('x1'))?1.0:gv('x1'), y1m = isNaN(gv('y1'))?2.2:gv('y1');
+  let x2m = isNaN(gv('x2'))?5.5:gv('x2'), y2m = isNaN(gv('y2'))?2.2:gv('y2');
+
+  const on1 = gc('active1'), on2 = gc('active2');
+
+  [x1m,y1m] = clampPos(x1m,y1m,r1);
+  [x2m,y2m] = clampPos(x2m,y2m,r2);
+
+  // Overlap resolution only if both active
+  document.getElementById('warn1').style.display='none';
+  document.getElementById('warn2').style.display='none';
+  if(on1 && on2){
+    const dx=x2m-x1m, dy=y2m-y1m, dist=Math.sqrt(dx*dx+dy*dy), minD=r1+r2+0.01;
+    if(dist<minD){
+      if(dist<1e-6){ x1m=Math.max(r1,x1m-minD/2); x2m=Math.min(WM-r2,x2m+minD/2); }
+      else{
+        const nx=dx/dist,ny=dy/dist,half=(minD-dist)/2;
+        x1m-=half*nx; y1m-=half*ny; x2m+=half*nx; y2m+=half*ny;
+        [x1m,y1m]=clampPos(x1m,y1m,r1); [x2m,y2m]=clampPos(x2m,y2m,r2);
+      }
+      document.getElementById('warn1').style.display='block';
+      document.getElementById('warn2').style.display='block';
+    }
+  }
+
+  const put=(id,v)=>{ const el=document.getElementById(id); if(Math.abs(parseFloat(el.value)-v)>1e-9) el.value=(+v.toFixed(2)); };
+  put('x1',x1m); put('y1',y1m); put('x2',x2m); put('y2',y2m);
+  ball1 = on1 ? makeBall(x1m,y1m,r1,m1,v1,a1,w1,'#c85a30') : null;
+  ball2 = on2 ? makeBall(x2m,y2m,r2,m2,v2,a2,w2,'#185fa5') : null;
+}
+
+function resolveCollision(b1,b2){
+  if(!b1||!b2) return;
+  const dx=b2.x-b1.x, dy=b2.y-b1.y, dist=Math.sqrt(dx*dx+dy*dy);
+  if(dist>=b1.r+b2.r||dist<1e-9) return;
+  const pen=(b1.r+b2.r-dist)*0.5, nx=dx/dist, ny=dy/dist;
+  b1.x-=pen*nx; b1.y-=pen*ny; b2.x+=pen*nx; b2.y+=pen*ny;
+  const v1x=b1.vx/SCALE,v1y=b1.vy/SCALE,v2x=b2.vx/SCALE,v2y=b2.vy/SCALE;
+  const dvn=(v1x-v2x)*nx+(v1y-v2y)*ny;
+  if(dvn<=0) return;
+  const tx=-ny,ty=nx;
+  const R1=b1.rpx,R2=b2.rpx;
+  const delta_ut=(v1x-v2x)*tx+(v1y-v2y)*ty+b1.omega*R1+b2.omega*R2;
+  const inv_Mn=1/b1.m+1/b2.m;
+  const inv_Mt=1/b1.m+1/b2.m+(R1*R1)/b1.I+(R2*R2)/b2.I;
+  const e=Math.min(1,Math.max(0,isNaN(gv('restitution'))?1:gv('restitution')));
+  const jn=-(1+e)*dvn/inv_Mn;
+  const mu=Math.min(1,Math.max(0,isNaN(gv('muPair'))?0.3:gv('muPair')));
+  const jt=Math.max(-mu*Math.abs(jn),Math.min(mu*Math.abs(jn),-delta_ut/inv_Mt));
+  b1.vx+=(jn*nx+jt*tx)/b1.m*SCALE; b1.vy+=(jn*ny+jt*ty)/b1.m*SCALE;
+  b2.vx-=(jn*nx+jt*tx)/b2.m*SCALE; b2.vy-=(jn*ny+jt*ty)/b2.m*SCALE;
+  b1.omega+=R1*jt/b1.I; b2.omega+=R2*jt/b2.I;
+}
+
+function wallBounce(b){
+  if(!b) return;
+  const e=Math.min(1,Math.max(0,isNaN(gv('restitution'))?1:gv('restitution')));
+  if(b.x-b.r<0){b.x=b.r;   b.vx= Math.abs(b.vx)*e;}
+  if(b.x+b.r>W){b.x=W-b.r; b.vx=-Math.abs(b.vx)*e;}
+  if(b.y-b.r<0){b.y=b.r;   b.vy= Math.abs(b.vy)*e;}
+  if(b.y+b.r>H){b.y=H-b.r; b.vy=-Math.abs(b.vy)*e;}
+}
+
+function drawArrow(x,y,vx,vy,color){
+  const spd=Math.sqrt(vx*vx+vy*vy);
+  if(spd<0.5) return;
+  const len=Math.min(spd*0.55,65), ux=vx/spd, uy=vy/spd;
+  const ex=x+ux*len, ey=y+uy*len, hw=6, hl=11;
+  ctx.save();
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=2.5; ctx.globalAlpha=0.85;
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(ex,ey); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ex,ey);
+  ctx.lineTo(ex-ux*hl-uy*hw/2,ey-uy*hl+ux*hw/2);
+  ctx.lineTo(ex-ux*hl+uy*hw/2,ey-uy*hl-ux*hw/2);
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+
+function drawGrid(){
+  ctx.save(); ctx.strokeStyle='#e8e4dc'; ctx.lineWidth=0.5;
+  for(let xm=0;xm<=WM;xm++){ctx.beginPath();ctx.moveTo(xm*SCALE,0);ctx.lineTo(xm*SCALE,H);ctx.stroke();}
+  for(let ym=0;ym<=HM;ym++){ctx.beginPath();ctx.moveTo(0,H-ym*SCALE);ctx.lineTo(W,H-ym*SCALE);ctx.stroke();}
+  ctx.fillStyle='#b0a898'; ctx.font='9px sans-serif';
+  for(let xm=0;xm<=WM;xm++) ctx.fillText(xm,xm*SCALE+2,H-2);
+  for(let ym=1;ym<=HM;ym++) ctx.fillText(ym,2,H-ym*SCALE+9);
+  ctx.fillText('(0,0)',2,H-2); ctx.restore();
+}
+
+function drawBall(b,label){
+  if(!b) return;
+  ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.angle);
+  ctx.beginPath(); ctx.arc(0,0,b.r,0,Math.PI*2);
+  ctx.fillStyle=b.color+'22'; ctx.strokeStyle=b.color; ctx.lineWidth=2;
+  ctx.fill(); ctx.stroke();
+  ctx.strokeStyle=b.color+'bb'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(b.r,0); ctx.stroke();
+  ctx.restore();
+  drawArrow(b.x,b.y,b.vx,b.vy,b.color);
+  const [xm,ym]=pxToM(b.x,b.y);
+  ctx.font='10px sans-serif'; ctx.fillStyle=b.color;
+  ctx.fillText(`${label} (${xm.toFixed(1)},${ym.toFixed(1)})`,b.x-b.r,b.y-b.r-4);
+}
+
+function updateStats(){
+  const a1=gc('active1'), a2=gc('active2');
+  if(a1&&ball1){
+    const s=Math.sqrt(ball1.vx*ball1.vx+ball1.vy*ball1.vy)/SCALE;
+    const a=((Math.atan2(-ball1.vy,ball1.vx)*180/Math.PI)+360)%360;
+    const o=-ball1.omega*180/Math.PI;
+    document.getElementById('s1').textContent=`速率: ${s.toFixed(2)} m/s | 角度: ${a.toFixed(1)}° | 角速度: ${o.toFixed(1)}°/s`;
+  } else {
+    document.getElementById('s1').textContent='（未加入模擬）';
+  }
+  if(a2&&ball2){
+    const s=Math.sqrt(ball2.vx*ball2.vx+ball2.vy*ball2.vy)/SCALE;
+    const a=((Math.atan2(-ball2.vy,ball2.vx)*180/Math.PI)+360)%360;
+    const o=-ball2.omega*180/Math.PI;
+    document.getElementById('s2').textContent=`速率: ${s.toFixed(2)} m/s | 角度: ${a.toFixed(1)}° | 角速度: ${o.toFixed(1)}°/s`;
+  } else {
+    document.getElementById('s2').textContent='（未加入模擬）';
+  }
+  updateEnergy();
+}
+
+function updateEnergy(){
+  let keTrans=0, keRot=0;
+  [ball1,ball2].forEach(b=>{
+    if(!b) return;
+    // vx,vy 存的是像素/秒，÷SCALE 換回 m/s；omega 為 rad/s；I 為 kg·m²
+    const v2=(b.vx*b.vx+b.vy*b.vy)/(SCALE*SCALE);
+    keTrans += 0.5*b.m*v2;
+    keRot   += 0.5*b.I*b.omega*b.omega;
+  });
+  const keTotal=keTrans+keRot;
+  document.getElementById('keTotal').textContent=keTotal.toFixed(3)+' J';
+  document.getElementById('keTrans').textContent=keTrans.toFixed(3)+' J';
+  document.getElementById('keRot').textContent=keRot.toFixed(3)+' J';
+  updateMomentum();
+}
+
+// 把動量向量格式化為「大小 @ 方向角」；速度需 ÷SCALE 換回 m/s
+function fmtMomentum(b){
+  if(!b) return '—';
+  const px=b.m*b.vx/SCALE, py=b.m*b.vy/SCALE;
+  const mag=Math.sqrt(px*px+py*py);
+  if(mag<1e-6) return '0.000 kg·m/s';
+  // 螢幕 y 向下，取負號換成數學上向上為正的角度
+  const ang=((Math.atan2(-py,px)*180/Math.PI)+360)%360;
+  return `${mag.toFixed(3)} kg·m/s @ ${ang.toFixed(1)}°`;
+}
+
+function updateMomentum(){
+  let px=0, py=0;
+  [ball1,ball2].forEach(b=>{
+    if(!b) return;
+    px+=b.m*b.vx/SCALE; py+=b.m*b.vy/SCALE;
+  });
+  const mag=Math.sqrt(px*px+py*py);
+  let totalText;
+  if(mag<1e-6){ totalText='0.000 kg·m/s'; }
+  else {
+    const ang=((Math.atan2(-py,px)*180/Math.PI)+360)%360;
+    totalText=`${mag.toFixed(3)} kg·m/s @ ${ang.toFixed(1)}°`;
+  }
+  document.getElementById('pTotal').textContent=totalText;
+  document.getElementById('p1').textContent=fmtMomentum(ball1);
+  document.getElementById('p2').textContent=fmtMomentum(ball2);
+  updateAngularMomentum();
+}
+
+// 單顆球對固定參考點 (0,0)（畫面左下角）的角動量：自轉 Iω + 軌道 m(r×v)
+// 位置與速度都換成物理座標系（左下角為原點、y 向上）。逆時針(數學正向)為正。
+function angMomentum(b){
+  const [xm,ym]=pxToM(b.x,b.y);     // 物理座標：左下角(0,0)、y 向上
+  const vx=b.vx/SCALE, vy=-b.vy/SCALE; // 螢幕 y 向下，速度 y 分量取負號轉成 y 向上
+  const orbital = (xm*vy - ym*vx)*b.m; // r×v 的 z 分量（標準數學慣例）
+  const spin    = -b.I*b.omega;         // 內部 omega 為畫布座標(順時針為正)，轉成數學正向(逆時針為正)
+  return orbital + spin;
+}
+
+function fmtL(v){ return v.toFixed(3)+' kg·m²/s'; }
+
+function updateAngularMomentum(){
+  // 參考點固定在畫面左下角 (0,0)
+  let L1=ball1?angMomentum(ball1):null;
+  let L2=ball2?angMomentum(ball2):null;
+  const Ltot=(L1||0)+(L2||0);
+  document.getElementById('lTotal').textContent=fmtL(Ltot);
+  document.getElementById('l1').textContent=L1===null?'—':fmtL(L1);
+  document.getElementById('l2').textContent=L2===null?'—':fmtL(L2);
+}
+
+function step(dt){
+  let vmax=0, rmin=Infinity;
+  [ball1,ball2].forEach(b=>{ if(!b) return; vmax=Math.max(vmax,Math.hypot(b.vx,b.vy)); rmin=Math.min(rmin,b.r); });
+  const SUB=Math.max(8,Math.min(240,Math.ceil(vmax*dt/(0.25*(rmin||1)))*(ball1&&ball2?2:1))), sdt=dt/SUB;
+  for(let i=0;i<SUB;i++){
+    if(ball1){ball1.x+=ball1.vx*sdt; ball1.y+=ball1.vy*sdt;}
+    if(ball2){ball2.x+=ball2.vx*sdt; ball2.y+=ball2.vy*sdt;}
+    resolveCollision(ball1,ball2);
+    wallBounce(ball1); wallBounce(ball2);
+    if(ball1) ball1.angle+=ball1.omega*sdt;
+    if(ball2) ball2.angle+=ball2.omega*sdt;
+  }
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#fdfaf4'; ctx.fillRect(0,0,W,H);
+  drawGrid();
+  drawBall(ball1,'球1');
+  drawBall(ball2,'球2');
+}
+
+function loop(ts){
+  if(!lastTime) lastTime=ts;
+  const dt=Math.min((ts-lastTime)/1000,0.033);
+  lastTime=ts;
+  if(!paused){ step(dt); updateStats(); }
+  draw();
+  animId=requestAnimationFrame(loop);
+}
+
+function startSim(){
+  if(animId) cancelAnimationFrame(animId);
+  lastTime=null; paused=false;
+  document.getElementById('pauseLabel').textContent='暫停';
+  document.getElementById('pauseIcon').textContent='⏸';
+  initBalls(); updateMoments(); updatePosDisplay(); applyToggleUI(); updateEnergy();
+  animId=requestAnimationFrame(loop);
+}
+
+// Wiring
+window.addEventListener('resize', ()=>{
+  const oldScale = SCALE;
+  resizeCanvas();
+  const ratio = SCALE / oldScale;
+  // 把球的像素值（位置、半徑、速度）依新比例換算，物理行為不變
+  [ball1,ball2].forEach(b=>{
+    if(!b) return;
+    b.x*=ratio; b.y*=ratio;
+    b.r*=ratio; b.vx*=ratio; b.vy*=ratio;
+  });
+  draw();
+});
+
+document.getElementById('active1').addEventListener('change', syncToggles);
+document.getElementById('active2').addEventListener('change', syncToggles);
+document.getElementById('active1b').addEventListener('change', syncTogglesB);
+document.getElementById('active2b').addEventListener('change', syncTogglesB);
+document.getElementById('pauseBtn').addEventListener('click',()=>{
+  paused=!paused; if(paused) lastTime=null;
+  document.getElementById('pauseLabel').textContent=paused?'繼續':'暫停';
+  document.getElementById('pauseIcon').textContent=paused?'▶':'⏸';
+});
+document.getElementById('resetBtn').addEventListener('click', startSim);
+document.getElementById('applyBtn').addEventListener('click', startSim);
+['r1','m1','r2','m2'].forEach(id=>document.getElementById(id).addEventListener('input',updateMoments));
+['r1','m1','r2','m2','x1','y1','x2','y2','v1','a1','w1','v2','a2','w2'].forEach(id=>
+  document.getElementById(id).addEventListener('change',()=>{ updatePosDisplay(); startSim(); }));
+window.addEventListener('keydown',e=>{
+  if(e.code==='Space' && !/INPUT|BUTTON/.test(e.target.tagName)){ e.preventDefault(); document.getElementById('pauseBtn').click(); }
+});
+['x1','y1','x2','y2'].forEach(id=>document.getElementById(id).addEventListener('input',updatePosDisplay));
+
+updateMoments(); updatePosDisplay(); startSim();
+</script>
+</body>
+</html>
+

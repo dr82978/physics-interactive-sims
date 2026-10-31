@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>等效原理：愛因斯坦電梯</title>
+<style>
+  :root{
+    color-scheme: light dark;
+    --bg:#faf9f5;
+    --ink:#2c2c2a; --muted:#5f5e5a; --card:#ffffff; --soft:#f4f3ee; --bd:rgba(0,0,0,.12);
+    --blue:#185fa5; --coral:#993c1d; --coralln:#d85a30; --teal:#0f6e56; --tealbg:#e1f5ee;
+    --rail:#cfcdc4; --ok:#3b6d11; --okbg:#eaf3de; --warn:#854f0b; --warnbg:#faeeda;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#161614;
+      --ink:#e8e6dd; --muted:#a6a49b; --card:#1f1f1d; --soft:#262624; --bd:rgba(255,255,255,.14);
+      --blue:#85b7eb; --coral:#f0997b; --coralln:#e8754d; --teal:#9fe1cb; --tealbg:#0f3d31;
+      --rail:#3a3a37; --ok:#c0dd97; --okbg:#1e2e0a; --warn:#fac775; --warnbg:#2e2206;
+    }
+  }
+  html,body{margin:0;background:var(--bg)}
+  body{padding:20px 16px 40px}
+  .eq{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);
+    line-height:1.5;max-width:700px;margin:0 auto;padding:6px 4px}
+  .eq-h{font-size:15px;font-weight:600;margin:8px 0 2px}
+  .eq-s{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+  .eq-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .eq-band{font-size:12px;color:var(--teal);background:var(--tealbg);border:1px solid var(--bd);
+    border-radius:8px;padding:6px 10px;text-align:center;margin:8px 0;font-weight:500}
+  .eq-cell{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:8px 10px}
+  .eq-cap{font-size:12.5px;margin:2px 0 0}
+  .eq-cap b{font-weight:600}
+  .eq-card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px 14px;margin-top:14px}
+  .eq-ctrl{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:13px;color:var(--muted)}
+  .eq-ctrl input[type=range]{flex:1;min-width:170px;accent-color:var(--coralln)}
+  .eq-verdict{font-size:13px;border-radius:8px;padding:8px 11px;margin-top:10px;border:1px solid var(--bd)}
+  text{font-family:inherit}
+  input:focus-visible{outline:2px solid var(--coralln);outline-offset:3px}
+</style>
+</head>
+<body>
+<div class="eq">
+
+  <p class="eq-h">圖 A ｜ Einstein 電梯:四格等價</p>
+  <p class="eq-s">同一列的兩種情境,局部任何實驗都無法區分。藍球 = 自由質點。</p>
+  <div class="eq-grid">
+    <div class="eq-cell">
+      <svg width="100%" viewBox="0 0 150 112" role="img" aria-label="Rocket accelerating in space">
+        <rect x="40" y="14" width="74" height="82" rx="8" fill="none" stroke="var(--muted)" stroke-width="1.4"/>
+        <line x1="48" y1="92" x2="106" y2="92" stroke="var(--muted)" stroke-width="1" opacity="0.6"/>
+        <circle cx="77" cy="85" r="7" fill="var(--blue)"/>
+        <line x1="22" y1="92" x2="22" y2="26" stroke="var(--coralln)" stroke-width="2.4"/>
+        <path d="M17 34 L22 22 L27 34" fill="none" stroke="var(--coralln)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="124" y="60" font-size="11" fill="var(--coral)">a=g</text>
+      </svg>
+      <p class="eq-cap"><b>太空中加速 a=g</b><br>球落向地板,你被壓住</p>
+    </div>
+    <div class="eq-cell">
+      <svg width="100%" viewBox="0 0 150 112" role="img" aria-label="At rest on Earth surface">
+        <rect x="40" y="14" width="74" height="82" rx="8" fill="none" stroke="var(--muted)" stroke-width="1.4"/>
+        <line x1="48" y1="92" x2="106" y2="92" stroke="var(--muted)" stroke-width="1" opacity="0.6"/>
+        <circle cx="77" cy="85" r="7" fill="var(--blue)"/>
+        <g stroke="var(--muted)" stroke-width="1">
+          <line x1="34" y1="100" x2="120" y2="100"/>
+          <line x1="40" y1="100" x2="34" y2="108"/><line x1="52" y1="100" x2="46" y2="108"/>
+          <line x1="64" y1="100" x2="58" y2="108"/><line x1="76" y1="100" x2="70" y2="108"/>
+          <line x1="88" y1="100" x2="82" y2="108"/><line x1="100" y1="100" x2="94" y2="108"/>
+          <line x1="112" y1="100" x2="106" y2="108"/>
+        </g>
+        <line x1="125" y1="26" x2="125" y2="78" stroke="var(--coralln)" stroke-width="2.4"/>
+        <path d="M120 70 L125 82 L130 70" fill="none" stroke="var(--coralln)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="128" y="50" font-size="11" fill="var(--coral)">g</text>
+      </svg>
+      <p class="eq-cap"><b>靜止於地表</b><br>球落向地板,你被壓住</p>
+    </div>
+  </div>
+  <div class="eq-band">↑ 局部無法區分:加速 ≡ 重力</div>
+
+  <div class="eq-grid">
+    <div class="eq-cell">
+      <svg width="100%" viewBox="0 0 150 112" role="img" aria-label="Freely falling elevator">
+        <rect x="40" y="14" width="74" height="82" rx="8" fill="none" stroke="var(--muted)" stroke-width="1.4"/>
+        <circle cx="77" cy="55" r="7" fill="var(--blue)"/>
+        <line x1="22" y1="24" x2="22" y2="86" stroke="var(--muted)" stroke-width="2" stroke-dasharray="4 3"/>
+        <path d="M17 78 L22 90 L27 78" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="118" y="60" font-size="10.5" fill="var(--muted)">自由</text><text x="118" y="73" font-size="10.5" fill="var(--muted)">下落</text>
+      </svg>
+      <p class="eq-cap"><b>自由下落的電梯</b><br>球漂浮,失重</p>
+    </div>
+    <div class="eq-cell">
+      <svg width="100%" viewBox="0 0 150 112" role="img" aria-label="Floating in deep space">
+        <rect x="40" y="14" width="74" height="82" rx="8" fill="none" stroke="var(--muted)" stroke-width="1.4"/>
+        <circle cx="77" cy="55" r="7" fill="var(--blue)"/>
+        <g fill="var(--muted)">
+          <circle cx="24" cy="30" r="1.4"/><circle cx="128" cy="40" r="1.4"/><circle cx="20" cy="74" r="1.4"/>
+          <circle cx="130" cy="84" r="1.4"/><circle cx="26" cy="96" r="1.4"/>
+        </g>
+      </svg>
+      <p class="eq-cap"><b>深太空,遠離重力</b><br>球漂浮,失重</p>
+    </div>
+  </div>
+  <div class="eq-band">↑ 局部無法區分:自由下落 ≡ 無重力</div>
+
+  <div class="eq-card">
+    <p class="eq-h" style="margin-top:0">圖 B ｜ 互動:為何等效原理「只在局部」成立</p>
+    <p class="eq-s">自由下落的大箱子裡放兩個質點,各自指向行星中心。拖動箱子尺寸 L,看兩者方向如何從「平行」變「張開」。</p>
+    <svg width="100%" viewBox="0 0 680 320" role="img" aria-label="Interactive tidal locality demo">
+      <title>潮汐與局部性</title>
+      <!-- 行星圓心 (340,640)、半徑 390：與下方 JS 的 PCx/PCy 一致，箭頭才真的指向所畫的行星中心 -->
+      <path d="M120 318 A 390 390 0 0 1 560 318 Z" fill="var(--soft)" stroke="var(--rail)" stroke-width="1"/>
+      <text x="340" y="305" text-anchor="middle" font-size="12" fill="var(--muted)">行星(重力指向其中心)</text>
+      <rect id="box" x="270" y="70" width="140" height="58" rx="8" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="5 4"/>
+      <text id="boxlbl" x="340" y="60" text-anchor="middle" font-size="12" fill="var(--muted)">電梯尺寸 L</text>
+      <line id="refL" x1="300" y1="99" x2="300" y2="170" stroke="var(--rail)" stroke-width="1" stroke-dasharray="3 3"/>
+      <line id="refR" x1="380" y1="99" x2="380" y2="170" stroke="var(--rail)" stroke-width="1" stroke-dasharray="3 3"/>
+      <line id="arL" x1="300" y1="99" x2="300" y2="170" stroke="var(--coralln)" stroke-width="2.2"/>
+      <path id="arLh" d="" fill="none" stroke="var(--coralln)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line id="arR" x1="380" y1="99" x2="380" y2="170" stroke="var(--coralln)" stroke-width="2.2"/>
+      <path id="arRh" d="" fill="none" stroke="var(--coralln)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle id="pL" cx="300" cy="99" r="5.5" fill="var(--blue)"/>
+      <circle id="pR" cx="380" cy="99" r="5.5" fill="var(--blue)"/>
+      <text x="14" y="26" font-size="12" fill="var(--muted)">灰虛線 = 平行參考</text>
+      <text x="14" y="44" font-size="12" fill="var(--coral)">紅 = 實際重力方向</text>
+    </svg>
+    <div class="eq-ctrl">
+      <span>箱子尺寸 L</span>
+      <input id="sl" type="range" min="20" max="420" value="80" step="2" aria-label="箱子尺寸 L">
+      <span>張開角 <b id="ang">—</b>°</span>
+    </div>
+    <div id="verdict" class="eq-verdict"></div>
+  </div>
+</div>
+<script>
+(function(){
+  var PCx=340, PCy=640;        // planet centre (below)
+  var topY=99, alen=72;
+  var sl=document.getElementById("sl");
+  function head(x,y,dx,dy){    // small arrowhead path at (x,y) along (dx,dy)
+    var a=Math.atan2(dy,dx), s=7;
+    var x1=x-s*Math.cos(a-0.5), y1=y-s*Math.sin(a-0.5);
+    var x2=x-s*Math.cos(a+0.5), y2=y-s*Math.sin(a+0.5);
+    return "M"+x1.toFixed(1)+" "+y1.toFixed(1)+" L"+x.toFixed(1)+" "+y.toFixed(1)+" L"+x2.toFixed(1)+" "+y2.toFixed(1);
+  }
+  function setArrow(lineId,headId,px){
+    var dx=PCx-px, dy=PCy-topY, n=Math.hypot(dx,dy); dx/=n; dy/=n;
+    var ex=px+alen*dx, ey=topY+alen*dy;
+    var L=document.getElementById(lineId);
+    L.setAttribute("x1",px); L.setAttribute("y1",topY);
+    L.setAttribute("x2",ex.toFixed(1)); L.setAttribute("y2",ey.toFixed(1));
+    document.getElementById(headId).setAttribute("d",head(ex,ey,dx,dy));
+    return Math.atan2(dx,dy); // angle from vertical
+  }
+  function upd(){
+    var Lpx=+sl.value, half=Lpx/2;
+    var xl=PCx-half, xr=PCx+half;
+    document.getElementById("box").setAttribute("x",(PCx-half).toFixed(1));
+    document.getElementById("box").setAttribute("width",Lpx);
+    document.getElementById("pL").setAttribute("cx",xl); 
+    document.getElementById("pR").setAttribute("cx",xr);
+    document.getElementById("refL").setAttribute("x1",xl);document.getElementById("refL").setAttribute("x2",xl);
+    document.getElementById("refR").setAttribute("x1",xr);document.getElementById("refR").setAttribute("x2",xr);
+    var aL=setArrow("arL","arLh",xl), aR=setArrow("arR","arRh",xr);
+    var splay=Math.abs(aL-aR)*180/Math.PI;
+    document.getElementById("ang").textContent=splay.toFixed(1);
+    var v=document.getElementById("verdict");
+    if(splay<3){ v.style.background="var(--okbg)"; v.style.color="var(--ok)";
+      v.innerHTML="<b>近似均勻場</b>:兩箭頭幾乎平行 → 局部等效原理成立,這個箱子裡就是狹義相對論。L→0 時精確。"; }
+    else { v.style.background="var(--warnbg)"; v.style.color="var(--warn)";
+      v.innerHTML="<b>潮汐效應顯現</b>:箭頭明顯張開,兩質點會相互靠近 → 真實重力(時空曲率)被洩漏出來。等加速參考系做不到這件事。"; }
+  }
+  sl.addEventListener("input",upd); upd();
+})();
+</script>
+</body>
+</html>

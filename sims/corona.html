@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>電暈場效模擬器 — AC 導線 vs 接地圓錐</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px;
+    background: #0a0e14;
+    color: #d4d4d8;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .container { max-width: 1180px; margin: 0 auto; }
+
+  header { margin-bottom: 20px; }
+  h1 {
+    font-size: 20px;
+    font-weight: 500;
+    margin: 0 0 4px;
+    color: #f4f4f5;
+    letter-spacing: -0.01em;
+  }
+  .subtitle { color: #6b7280; font-size: 13px; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 18px;
+  }
+  @media (max-width: 880px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .canvas-wrap {
+    background: #050810;
+    border: 1px solid #1f2937;
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 30 / 22;
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+  .overlay {
+    position: absolute;
+    background: rgba(0,0,0,0.55);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #9ca3af;
+    font-family: "SF Mono", Menlo, monospace;
+    pointer-events: none;
+    backdrop-filter: blur(4px);
+  }
+  .overlay.tl { top: 10px; left: 10px; }
+  .overlay.tr { top: 10px; right: 10px; }
+  .overlay.bl { bottom: 10px; left: 10px; }
+
+  .scale-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .scale-bar .grad {
+    width: 120px;
+    height: 8px;
+    border-radius: 2px;
+    background: linear-gradient(to right,
+      rgb(0,0,4) 0%,
+      rgb(40,11,84) 20%,
+      rgb(101,21,110) 35%,
+      rgb(159,42,99) 50%,
+      rgb(212,72,66) 65%,
+      rgb(245,125,21) 80%,
+      rgb(250,193,39) 92%,
+      rgb(252,255,164) 100%
+    );
+  }
+  .scale-bar .label { font-size: 10px; }
+
+  .panel {
+    background: #0e131b;
+    border: 1px solid #1f2937;
+    border-radius: 6px;
+    padding: 16px;
+  }
+  .section { margin-bottom: 16px; }
+  .section:last-child { margin-bottom: 0; }
+  .section-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b7280;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #1f2937;
+    padding-bottom: 6px;
+  }
+
+  .slider-row { margin-bottom: 12px; }
+  .slider-row:last-child { margin-bottom: 0; }
+  .slider-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12px;
+    color: #9ca3af;
+    margin-bottom: 4px;
+  }
+  .slider-label .value {
+    color: #fbbf24;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  input[type=range] {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: #1f2937;
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #fbbf24;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #0e131b;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: #fbbf24;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #0e131b;
+  }
+
+  .voltage-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+  .voltage-grid button {
+    background: #1f2937;
+    border: 1px solid #2d3748;
+    color: #d4d4d8;
+    padding: 8px 4px;
+    font-size: 11px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, monospace;
+    transition: all 0.15s;
+  }
+  .voltage-grid button:hover {
+    background: #2d3748;
+    border-color: #4b5563;
+  }
+  .voltage-grid button.active {
+    background: #fbbf24;
+    color: #0a0e14;
+    border-color: #fbbf24;
+    font-weight: 500;
+  }
+  .voltage-unit {
+    text-align: center;
+    font-size: 10px;
+    color: #6b7280;
+    margin-top: 6px;
+  }
+
+  .readout {
+    background: #050810;
+    border: 1px solid #1f2937;
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .readout-label { font-size: 11px; color: #9ca3af; }
+  .readout-value {
+    font-size: 14px;
+    font-family: "SF Mono", Menlo, monospace;
+    color: #fbbf24;
+    font-weight: 500;
+  }
+
+  .status {
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    text-align: center;
+    font-weight: 500;
+    margin-top: 8px;
+    transition: all 0.2s;
+  }
+  .status.safe {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+  .status.warn {
+    background: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+  }
+  .status.corona {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
+    50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  }
+
+  .notes {
+    margin-top: 20px;
+    padding: 16px 20px;
+    background: #0e131b;
+    border: 1px solid #1f2937;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #9ca3af;
+    line-height: 1.7;
+  }
+  .notes h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #fbbf24;
+    margin: 0 0 12px;
+    font-weight: 500;
+  }
+  .notes ul { margin: 0; padding-left: 18px; }
+  .notes li { margin-bottom: 6px; }
+  .notes code {
+    background: #1f2937;
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: #fbbf24;
+    font-size: 12px;
+    font-family: "SF Mono", Menlo, monospace;
+  }
+
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #9ca3af;
+    margin-bottom: 8px;
+  }
+  .checkbox-row input { cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 2px solid #fbbf24; outline-offset: 2px; }
+
+  .formula {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    color: #6b7280;
+    background: #050810;
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid #1f2937;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>電暈場效模擬器</h1>
+  <div class="subtitle">無限長 AC 導線 ╳ 接地圓錐 — 即時 Laplace 解算 + Peek 閾值比對</div>
+</header>
+
+<div class="layout">
+
+  <div class="canvas-wrap">
+    <canvas id="sim"></canvas>
+    <div class="overlay tl" id="acphase">⟳ AC phase</div>
+    <div class="overlay bl">
+      <div class="scale-bar">
+        <span class="label">10²</span>
+        <div class="grad"></div>
+        <span class="label">10⁵ V/cm</span>
+      </div>
+    </div>
+    <div class="overlay tr" id="zoneinfo">紅色覆蓋 = |E| &gt; E_c</div>
+  </div>
+
+  <div class="panel">
+
+    <div class="section">
+      <div class="section-title">圓錐幾何</div>
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>尖端曲率半徑 r</span>
+          <span class="value" id="rval">0.50 cm</span>
+        </div>
+        <input type="range" id="r" min="3" max="200" value="50" aria-label="尖端曲率半徑">
+      </div>
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>線—尖端距離 d</span>
+          <span class="value" id="dval">6.0 cm</span>
+        </div>
+        <input type="range" id="d" min="15" max="160" value="60" aria-label="線與尖端距離">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">線電壓 (RMS, L-L)</div>
+      <div class="voltage-grid">
+        <button data-v="22.8">22.8</button>
+        <button data-v="69">69</button>
+        <button data-v="161" class="active">161</button>
+        <button data-v="345">345</button>
+      </div>
+      <div class="voltage-unit">kV — 22.8 配電、161/345 特高壓</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">大氣條件</div>
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>相對空氣密度 δ</span>
+          <span class="value" id="deltaval">1.00</span>
+        </div>
+        <input type="range" id="delta" min="75" max="115" value="100" aria-label="相對空氣密度">
+      </div>
+      <div style="font-size:10px;color:#6b7280;margin-top:-4px;">熱天/高海拔 → δ↓ → E_c↓</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">顯示</div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="showLines" checked>
+        <label for="showLines">電場線 (streamlines)</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="showZone" checked>
+        <label for="showZone">電暈區域標示</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="showAC" checked>
+        <label for="showAC">AC 振盪</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">即時讀數</div>
+      <div class="readout">
+        <span class="readout-label">|E| @ 尖端（峰值）</span>
+        <span class="readout-value" id="etip">— kV/cm</span>
+      </div>
+      <div class="readout">
+        <span class="readout-label">E_c (Peek)</span>
+        <span class="readout-value" id="ec">— kV/cm</span>
+      </div>
+      <div class="readout">
+        <span class="readout-label">|E|/E_c</span>
+        <span class="readout-value" id="ratio">—</span>
+      </div>
+      <div class="status safe" id="status">— 安全 —</div>
+      <div class="formula">E_c = 30·δ·(1 + 0.301/√(δr))　（Peek，峰值，r 以 cm 計）<br>E_tip = 2V<sub>pk</sub> / (r·ln(4d/r))　（尖端，解析近似）</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="notes">
+  <h3>嘗試這些操作觀察 corona 何時出現</h3>
+  <ul>
+    <li>把<code>尖端半徑</code>拉到最小:同一電壓下尖端場強急劇上升。注意 Peek 公式裡 E_c 對小 r 反而<b>上升</b>（電離區太薄）,但 1/r 場集中效應壓倒它,所以淨效應是「越尖越早起暈」</li>
+    <li>切換電壓 <code>22.8 → 345 kV</code>:看熱圖整體往紅色端推進,以及 <code>|E|/E_c</code> 跳變</li>
+    <li>拉近<code>線—尖端距離</code>:尖端場約以 1/d 上升,場線往尖端聚集得更密</li>
+    <li>降低 <code>δ</code>(高溫、高海拔、低氣壓):Peek 臨界場下降,同樣外加電壓下更容易起暈——這就是為什麼山區、夏天電暈損耗較高</li>
+    <li>22.8 kV 配電、間距 6 cm 時,尖端半徑要小於約 <b>1.3 mm</b> 才越過 Peek 閾值(預設 5 mm 約為閾值的 0.46 倍)——圓滑的物體停在配電線上不會起暈,但尖銳毛刺會</li>
+    <li>161 kV / 345 kV 在此幾何下,連 r = 2 cm 的鈍尖都遠超閾值,導線表面本身也會起暈(<code>|E|/E_c</code> 約 1.4 以上)。AC 振盪開啟時,紅色區域只在電壓接近峰值時才亮起</li>
+  </ul>
+</div>
+
+</div>
+
+<script>
+// ============================================================
+// CONSTANTS & STATE
+// ============================================================
+const NX = 140;
+const NY = 100;
+const DOMAIN_W = 30;  // cm
+const DOMAIN_H = 22;  // cm
+const DX = DOMAIN_W / NX;
+const DY = DOMAIN_H / NY;
+
+const WIRE_X = DOMAIN_W / 2;
+const WIRE_Y = DOMAIN_H - 1.5;  // 1.5cm from top
+const WIRE_R = 0.5;             // 5mm conductor (typical 22.8kV ACSR scaled)
+const CONE_HEIGHT = 8;          // fixed cone height
+const CONE_BASE_W = 5;          // fixed base width
+
+const state = {
+  tipR: 0.5,
+  distance: 6,
+  voltageKV: 161,
+  delta: 1.0,
+  showLines: true,
+  showZone: true,
+  showAC: true,
+};
+
+const V = new Float32Array(NX * NY);
+const isFixed = new Uint8Array(NX * NY);
+const cellType = new Uint8Array(NX * NY); // 0=air, 1=wire, 2=cone
+const Emag = new Float32Array(NX * NY);
+const Ex_arr = new Float32Array(NX * NY);
+const Ey_arr = new Float32Array(NX * NY);
+
+const idx = (i, j) => j * NX + i;
+
+// ============================================================
+// PHYSICS
+// ============================================================
+function setupBCs() {
+  V.fill(0);
+  isFixed.fill(0);
+  cellType.fill(0);
+
+  // Wire potential (line-to-neutral peak)
+  const Vpeak = (state.voltageKV * 1000 / Math.sqrt(3)) * Math.sqrt(2);
+
+  const tipY = WIRE_Y - state.distance;
+  const baseY = tipY - CONE_HEIGHT;
+
+  for (let j = 0; j < NY; j++) {
+    for (let i = 0; i < NX; i++) {
+      const x = i * DX;
+      const y = j * DY;
+      const k = idx(i, j);
+
+      // Wire: circular cross-section at top
+      const dxw = x - WIRE_X;
+      const dyw = y - WIRE_Y;
+      if (Math.sqrt(dxw*dxw + dyw*dyw) < WIRE_R) {
+        isFixed[k] = 1;
+        V[k] = Vpeak;
+        cellType[k] = 1;
+        continue;
+      }
+
+      // Cone: tip at (WIRE_X, tipY) pointing up, with rounded top of radius tipR
+      // Center of tip circle at (WIRE_X, cy = tipY - tipR), topmost point at y=tipY
+      if (y >= baseY && y <= tipY) {
+        const cx = WIRE_X;
+        const cy = tipY - state.tipR;
+        const dxC = x - cx;
+        const dyC = y - cy;
+
+        // Full rounded cap (circle)
+        if (Math.sqrt(dxC*dxC + dyC*dyC) < state.tipR) {
+          isFixed[k] = 1; V[k] = 0; cellType[k] = 2; continue;
+        }
+        // Trapezoidal body: from cy down to baseY
+        if (y <= cy) {
+          const t = (cy - y) / Math.max(0.01, cy - baseY);
+          const halfW = state.tipR + t * (CONE_BASE_W/2 - state.tipR);
+          if (Math.abs(dxC) < halfW) {
+            isFixed[k] = 1; V[k] = 0; cellType[k] = 2; continue;
+          }
+        }
+      }
+
+      // Bottom ground plane
+      if (j === 0) { isFixed[k] = 1; V[k] = 0; continue; }
+      // Side boundaries: leave as 0 (far field approximation)
+      if (i === 0 || i === NX-1) { isFixed[k] = 1; V[k] = 0; continue; }
+      // Top: leave as 0 (far field above wire)
+      if (j === NY-1) { isFixed[k] = 1; V[k] = 0; continue; }
+    }
+  }
+
+  // Initial smooth guess: linear interpolation
+  for (let j = 1; j < NY-1; j++) {
+    for (let i = 1; i < NX-1; i++) {
+      const k = idx(i, j);
+      if (isFixed[k]) continue;
+      // Linear interp between wire (Vpeak) and ground (0) based on y position
+      V[k] = Vpeak * (j / (NY-1)) * 0.5;
+    }
+  }
+}
+
+function relax(iterations) {
+  const omega = 1.88;
+  for (let iter = 0; iter < iterations; iter++) {
+    // Red-black SOR
+    for (let parity = 0; parity < 2; parity++) {
+      for (let j = 1; j < NY-1; j++) {
+        const iStart = 1 + ((j + parity) % 2);
+        for (let i = iStart; i < NX-1; i += 2) {
+          const k = j * NX + i;
+          if (isFixed[k]) continue;
+          const avg = 0.25 * (V[k-1] + V[k+1] + V[k-NX] + V[k+NX]);
+          V[k] = V[k] + omega * (avg - V[k]);
+        }
+      }
+    }
+  }
+}
+
+function computeFieldGrid() {
+  for (let j = 1; j < NY-1; j++) {
+    for (let i = 1; i < NX-1; i++) {
+      const k = j * NX + i;
+      if (isFixed[k] && cellType[k] !== 0) {
+        Emag[k] = 0;
+        Ex_arr[k] = 0;
+        Ey_arr[k] = 0;
+        continue;
+      }
+      const ex = -(V[k+1] - V[k-1]) / (2 * DX);
+      const ey = -(V[k+NX] - V[k-NX]) / (2 * DY);
+      Ex_arr[k] = ex;
+      Ey_arr[k] = ey;
+      Emag[k] = Math.sqrt(ex*ex + ey*ey);
+    }
+  }
+}
+
+function getTipFieldAnalytical() {
+  // 尖端（曲率半徑 r）對平面的雙曲面近似 (Eyring)：E_tip = 2V / (r · ln(4d/r))，d≫r 時成立。
+  // 以線表面至尖端的間隙 d 代入；d/r 接近 1 時對數項取下限以免發散。尖端為 3D 點特徵，故以解析式讀數，
+  // 熱圖則為 2D 截面的 Laplace 數值解（網格 0.21 cm 解析不到亞毫米尖端）。
+  const Vpeak = (state.voltageKV * 1000 / Math.sqrt(3)) * Math.sqrt(2);
+  const gap = Math.max(0.3, state.distance - WIRE_R);
+  const arg = Math.max(2, 4 * gap / state.tipR);
+  const Etip = 2 * Vpeak / (state.tipR * Math.log(arg));  // V/cm
+  return Etip / 1000;  // kV/cm
+}
+
+function getPeekEc() {
+  // E_c (peak) = 30 * m * delta * (1 + 0.301 / sqrt(delta * r))  kV/cm
+  const m = 1.0;
+  return 30 * m * state.delta * (1 + 0.301 / Math.sqrt(state.delta * state.tipR));
+}
+
+function getWireSurfaceField() {
+  // Approximate wire surface field for cylindrical conductor near ground
+  const Vpeak = (state.voltageKV * 1000 / Math.sqrt(3)) * Math.sqrt(2);
+  const H = WIRE_Y;  // height above bottom ground plane
+  const Ewire = Vpeak / (WIRE_R * Math.log(2 * H / WIRE_R));  // V/cm
+  return Ewire / 1000;  // kV/cm
+}
+
+function getWireEc() {
+  return 30 * state.delta * (1 + 0.301 / Math.sqrt(state.delta * WIRE_R));
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+const canvas = document.getElementById('sim');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function infernoColor(t) {
+  t = Math.max(0, Math.min(1, t));
+  // Simplified inferno colormap (key stops)
+  const stops = [
+    [0,    [0, 0, 4]],
+    [0.13, [21, 14, 55]],
+    [0.25, [62, 16, 99]],
+    [0.4,  [114, 31, 107]],
+    [0.5,  [159, 42, 99]],
+    [0.65, [212, 72, 66]],
+    [0.78, [245, 125, 21]],
+    [0.9,  [250, 193, 39]],
+    [1,    [252, 255, 164]],
+  ];
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (t <= stops[i+1][0]) {
+      const span = stops[i+1][0] - stops[i][0];
+      const f = (t - stops[i][0]) / span;
+      const a = stops[i][1], b = stops[i+1][1];
+      return [
+        Math.round(a[0] + (b[0]-a[0])*f),
+        Math.round(a[1] + (b[1]-a[1])*f),
+        Math.round(a[2] + (b[2]-a[2])*f),
+      ];
+    }
+  }
+  return stops[stops.length-1][1];
+}
+
+const hmCanvas = document.createElement('canvas');
+hmCanvas.width = NX; hmCanvas.height = NY;
+const hmCtx = hmCanvas.getContext('2d');
+const hmImg = hmCtx.createImageData(NX, NY);
+const cdCanvas = document.createElement('canvas');          // 導體層（不做平滑，保持銳利邊緣）
+cdCanvas.width = NX; cdCanvas.height = NY;
+const cdCtx = cdCanvas.getContext('2d');
+const cdImg = cdCtx.createImageData(NX, NY);
+const LUT = new Uint8ClampedArray(256 * 3);
+for (let n = 0; n < 256; n++) { const c = infernoColor(n / 255); LUT[3*n] = c[0]; LUT[3*n+1] = c[1]; LUT[3*n+2] = c[2]; }
+
+function renderHeatmap(acAmp, Ec) {
+  const rect = canvas.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  ctx.fillStyle = '#050810';
+  ctx.fillRect(0, 0, W, H);
+
+  const hd = hmImg.data, cd = cdImg.data;
+  hd.fill(0); cd.fill(0);
+  for (let j = 0; j < NY; j++) {
+    const row = NY - 1 - j;
+    for (let i = 0; i < NX; i++) {
+      const k = j * NX + i, o = (row * NX + i) * 4;
+      const ct = cellType[k];
+      if (ct === 1) { cd[o] = 251; cd[o+1] = 191; cd[o+2] = 36; cd[o+3] = 255; continue; }
+      if (ct === 2) { cd[o] = 60;  cd[o+1] = 70;  cd[o+2] = 85; cd[o+3] = 255; continue; }
+      const Eraw = Emag[k] * acAmp;
+      if (Eraw < 1) continue;
+      const n = Math.max(0, Math.min(255, Math.round(255 * (Math.log10(Eraw) - 2) / 3)));
+      hd[o] = LUT[3*n]; hd[o+1] = LUT[3*n+1]; hd[o+2] = LUT[3*n+2]; hd[o+3] = 255;
+    }
+  }
+  hmCtx.putImageData(hmImg, 0, 0);
+  cdCtx.putImageData(cdImg, 0, 0);
+  ctx.imageSmoothingEnabled = true;  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(hmCanvas, 0, 0, W, H);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(cdCanvas, 0, 0, W, H);
+  ctx.imageSmoothingEnabled = true;
+
+  // Corona zone overlay — uses ANALYTICAL fields, not grid (grid can't resolve sub-cell sharp features)
+  if (state.showZone) {
+    renderCoronaZoneAnalytical(W, H, acAmp);
+  }
+}
+
+function renderCoronaZoneAnalytical(W, H, acAmp) {
+  const physToPx = (x, y) => [(x / DOMAIN_W) * W, H - (y / DOMAIN_H) * H];
+  const cmToPx = cm => (cm / DOMAIN_W) * W;
+
+  const Ec = getPeekEc();
+  const Etip = getTipFieldAnalytical() * acAmp;        // 瞬時場 = 峰值 × |sin ωt|
+  const Ewire = getWireSurfaceField() * acAmp;
+  const EcWire = getWireEc();
+
+  // ---- Tip corona zone ----
+  if (Etip > Ec) {
+    const ratio = Etip / Ec;
+    const tipY = WIRE_Y - state.distance;
+    const [cx, cy] = physToPx(WIRE_X, tipY);
+
+    // Ionization zone radius: grows from tipR outward as ratio increases
+    // Empirical scaling: physical ionization radius ~ tipR * sqrt(ratio - 1) for sharp tips
+    const rCm = state.tipR + 0.5 * Math.sqrt(ratio - 1) + 0.2 * Math.log(ratio);
+    const rPx = cmToPx(rCm);
+
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rPx);
+    grad.addColorStop(0, 'rgba(239, 68, 68, 0.85)');
+    grad.addColorStop(0.35, 'rgba(239, 68, 68, 0.55)');
+    grad.addColorStop(0.75, 'rgba(239, 68, 68, 0.2)');
+    grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rPx, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ---- Wire surface corona zone ----
+  if (Ewire > EcWire) {
+    const ratio = Ewire / EcWire;
+    const [wx, wy] = physToPx(WIRE_X, WIRE_Y);
+    // Annular zone around wire
+    const wireRpx = cmToPx(WIRE_R);
+    const outerCm = WIRE_R + 0.3 * Math.sqrt(ratio - 1) + 0.15 * Math.log(ratio);
+    const outerPx = cmToPx(outerCm);
+
+    const grad = ctx.createRadialGradient(wx, wy, wireRpx * 0.9, wx, wy, outerPx);
+    grad.addColorStop(0, 'rgba(239, 68, 68, 0.75)');
+    grad.addColorStop(0.5, 'rgba(239, 68, 68, 0.4)');
+    grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(wx, wy, outerPx, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function renderFieldLines() {
+  if (!state.showLines) return;
+  const rect = canvas.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+
+  const physToPx = (x, y) => [(x / DOMAIN_W) * W, H - (y / DOMAIN_H) * H];
+
+  ctx.strokeStyle = 'rgba(220, 230, 240, 0.35)';
+  ctx.lineWidth = 0.7;
+
+  // Trace lines from points on the wire surface, going outward
+  const numLines = 24;
+  for (let n = 0; n < numLines; n++) {
+    const ang = (n / numLines) * Math.PI * 2;
+    let x = WIRE_X + (WIRE_R + 0.15) * Math.cos(ang);
+    let y = WIRE_Y + (WIRE_R + 0.15) * Math.sin(ang);
+
+    ctx.beginPath();
+    const [px0, py0] = physToPx(x, y);
+    ctx.moveTo(px0, py0);
+
+    const ds = 0.12;  // cm step
+    for (let step = 0; step < 600; step++) {
+      const i = Math.floor(x / DX);
+      const j = Math.floor(y / DY);
+      if (i < 1 || i >= NX-1 || j < 1 || j >= NY-1) break;
+      const k = idx(i, j);
+      if (cellType[k] === 2) break;  // hit cone
+      const e = Emag[k];
+      if (e < 50) break;  // field too weak
+
+      // Field direction (E points from + to -, so wire to cone)
+      const ex = Ex_arr[k];
+      const ey = Ey_arr[k];
+      x += ds * ex / e;
+      y += ds * ey / e;
+
+      if (x < 0 || x > DOMAIN_W || y < 0 || y > DOMAIN_H) break;
+
+      const [px, py] = physToPx(x, y);
+      ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+}
+
+function renderLabels() {
+  const rect = canvas.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  const physToPx = (x, y) => [(x / DOMAIN_W) * W, H - (y / DOMAIN_H) * H];
+
+  // Wire label
+  const [wx, wy] = physToPx(WIRE_X + WIRE_R + 0.5, WIRE_Y);
+  ctx.font = '11px "SF Mono", Menlo, monospace';
+  const lbl = `${state.voltageKV} kV AC`, lw = ctx.measureText(lbl).width;
+  ctx.fillStyle = 'rgba(5,8,16,0.72)';                 // 底襯：熱圖高亮處也讀得到
+  ctx.fillRect(wx - 3, wy - 11, lw + 6, 15);
+  ctx.fillStyle = '#fbbf24';
+  ctx.fillText(lbl, wx, wy);
+
+  // Cone tip label
+  const tipY = WIRE_Y - state.distance;
+  const [tx, ty] = physToPx(WIRE_X + 0.4, tipY + 0.1);
+  ctx.fillStyle = 'rgba(5,8,16,0.72)'; ctx.fillRect(tx - 3, ty - 11, 24, 15);
+  ctx.fillStyle = '#a1a1aa';
+  ctx.fillText('tip', tx, ty);
+
+  // Distance arrow indicator
+  const [d1x, d1y] = physToPx(WIRE_X + 1.5, WIRE_Y - 0.4);
+  const [d2x, d2y] = physToPx(WIRE_X + 1.5, tipY + 0.4);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 2]);
+  ctx.beginPath();
+  ctx.moveTo(d1x, d1y);
+  ctx.lineTo(d2x, d2y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  const [dx, dy] = physToPx(WIRE_X + 1.8, (WIRE_Y + tipY) / 2);
+  ctx.fillStyle = 'rgba(5,8,16,0.72)'; ctx.fillRect(dx - 3, dy - 11, 62, 15);
+  ctx.fillStyle = '#a1a1aa';
+  ctx.fillText(`d=${state.distance.toFixed(1)}cm`, dx, dy);
+}
+
+// ============================================================
+// READOUTS
+// ============================================================
+function updateReadouts() {
+  const Etip = getTipFieldAnalytical();  // kV/cm
+  const Ec = getPeekEc();                // kV/cm
+  const ratio = Etip / Ec;
+
+  document.getElementById('etip').textContent = Etip.toFixed(1) + ' kV/cm';
+  document.getElementById('ec').textContent = Ec.toFixed(1) + ' kV/cm';
+  document.getElementById('ratio').textContent = ratio.toFixed(2);
+
+  const statusEl = document.getElementById('status');
+  statusEl.classList.remove('safe', 'warn', 'corona');
+  if (ratio < 0.7) {
+    statusEl.classList.add('safe');
+    statusEl.textContent = '— 安全 (well below threshold) —';
+  } else if (ratio < 1.0) {
+    statusEl.classList.add('warn');
+    statusEl.textContent = '— 接近閾值 —';
+  } else {
+    statusEl.classList.add('corona');
+    statusEl.textContent = '✱ CORONA ✱';
+  }
+}
+
+// ============================================================
+// ANIMATION LOOP
+// ============================================================
+let needsResolve = true;
+let acStartTime = performance.now();
+
+function loop() {
+  if (needsResolve) {
+    setupBCs();
+    relax(1200);
+    computeFieldGrid();
+    updateReadouts();
+    needsResolve = false;
+  }
+
+  const t = (performance.now() - acStartTime) / 1000;
+  const acAmp = state.showAC ? Math.abs(Math.sin(2 * Math.PI * t / 1.6)) : 1.0;
+  const Ec = getPeekEc();
+
+  renderHeatmap(acAmp, Ec);
+  renderFieldLines();
+  renderLabels();
+
+  // Update AC phase indicator
+  const phaseEl = document.getElementById('acphase');
+  const ph = (((t / 1.6) % 1) + 1) % 1 * 360;
+  const inst = state.showAC ? Math.sin(2 * Math.PI * t / 1.6) : 1;
+  phaseEl.textContent = state.showAC
+    ? `⟳ ωt = ${ph.toFixed(0)}° · v/V_pk = ${(inst >= 0 ? '+' : '−')}${Math.abs(inst).toFixed(2)}`
+    : '⟳ 取峰值（AC 振盪已關）';
+
+  requestAnimationFrame(loop);
+}
+
+// ============================================================
+// EVENT HANDLERS
+// ============================================================
+function bindControls() {
+  const rSlider = document.getElementById('r');
+  const dSlider = document.getElementById('d');
+  const deltaSlider = document.getElementById('delta');
+
+  rSlider.addEventListener('input', e => {
+    state.tipR = parseInt(e.target.value) / 100;
+    document.getElementById('rval').textContent = state.tipR.toFixed(2) + ' cm';
+    needsResolve = true;
+  });
+  dSlider.addEventListener('input', e => {
+    state.distance = parseInt(e.target.value) / 10;
+    document.getElementById('dval').textContent = state.distance.toFixed(1) + ' cm';
+    needsResolve = true;
+  });
+  deltaSlider.addEventListener('input', e => {
+    state.delta = parseInt(e.target.value) / 100;
+    document.getElementById('deltaval').textContent = state.delta.toFixed(2);
+    needsResolve = true;
+  });
+
+  document.querySelectorAll('.voltage-grid button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.voltage-grid button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.voltageKV = parseFloat(btn.dataset.v);
+      needsResolve = true;
+    });
+  });
+
+  document.getElementById('showLines').addEventListener('change', e => state.showLines = e.target.checked);
+  document.getElementById('showZone').addEventListener('change', e => state.showZone = e.target.checked);
+  document.getElementById('showAC').addEventListener('change', e => state.showAC = e.target.checked);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+bindControls();
+loop();
+</script>
+
+</body>
+</html>

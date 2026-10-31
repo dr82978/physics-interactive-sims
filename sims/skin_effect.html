@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>趨膚效應模擬器 · Skin-Effect Simulator</title>
+<style>
+  :root{
+    --bg:#06080c; --panel:#0c1118; --panel2:#0f1620; --line:#1b2632;
+    --ink:#e7edf3; --dim:#7c8da0; --faint:#46566a;
+    --cyan:#22d3ee;      /* 入射波 / 介質A */
+    --violet:#c084fc;    /* 透射波 / 介質B */
+    --amber:#fbbf24;     /* 1/e 標注 */
+    --red:#fb7185;       /* 反射 */
+    --grid:rgba(40,72,96,.28);
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--mono)}
+  body{padding:18px;display:flex;flex-direction:column;gap:14px;max-width:1180px;margin:0 auto}
+
+  header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:10px}
+  header h1{font-size:15px;letter-spacing:.18em;text-transform:uppercase;margin:0;font-weight:600}
+  header .sub{font-size:11px;color:var(--dim);letter-spacing:.05em}
+  header .dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);display:inline-block}
+
+  .scope{position:relative;background:linear-gradient(180deg,#080c12,#0a0f16);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  canvas{display:block;width:100%}
+  #wave{height:340px}
+  #meter{height:96px}
+
+  .grid2{display:grid;grid-template-columns:1.35fr 1fr;gap:14px}
+  @media(max-width:860px){.grid2{grid-template-columns:1fr}}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .panel h2{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin:0 0 12px;font-weight:600}
+
+  /* 控制列 */
+  .ctrl{margin-bottom:13px}
+  .ctrl:last-child{margin-bottom:0}
+  .ctrl .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+  .ctrl label{font-size:11px;color:var(--ink)}
+  .ctrl .val{font-size:11px;color:var(--amber);font-variant-numeric:tabular-nums}
+  button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:3px;background:var(--line);border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--ink);border:2px solid var(--bg);cursor:pointer;box-shadow:0 0 7px rgba(231,237,243,.4)}
+  input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--ink);border:2px solid var(--bg);cursor:pointer}
+  input[type=range].a::-webkit-slider-thumb{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+  input[type=range].b::-webkit-slider-thumb{background:var(--violet);box-shadow:0 0 8px var(--violet)}
+  input[type=range].a::-moz-range-thumb{background:var(--cyan)}
+  input[type=range].b::-moz-range-thumb{background:var(--violet)}
+
+  .media-head{display:flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.1em;margin:2px 0 10px;text-transform:uppercase}
+  .swatch{width:9px;height:9px;border-radius:2px}
+  .mA .swatch{background:var(--cyan)} .mB .swatch{background:var(--violet)}
+
+  /* 讀數 */
+  .readout{display:grid;grid-template-columns:1fr 1fr;gap:9px 16px}
+  .readout .item{display:flex;flex-direction:column;gap:2px;border-left:2px solid var(--line);padding-left:9px}
+  .readout .k{font-size:9.5px;color:var(--dim);letter-spacing:.04em}
+  .readout .v{font-size:14px;font-variant-numeric:tabular-nums}
+  .readout .v small{font-size:10px;color:var(--dim)}
+  .hero-delta{grid-column:1/-1;border-left:2px solid var(--amber);padding-left:10px}
+  .hero-delta .v{font-size:22px;color:var(--amber)}
+  .regime{grid-column:1/-1;font-size:11px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;letter-spacing:.03em}
+  .regime b{color:var(--cyan)}
+
+  /* presets */
+  .presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+  .presets button{font-family:var(--mono);font-size:10.5px;color:var(--dim);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 9px;cursor:pointer;transition:.15s}
+  .presets button:hover{color:var(--ink);border-color:var(--violet)}
+
+  .toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--dim)}
+  .toolbar label{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+  .toolbar input{accent-color:var(--violet)}
+  .note{font-size:10.5px;color:var(--faint);line-height:1.65}
+  .note b{color:var(--dim)}
+  details summary{cursor:pointer;font-size:10.5px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;list-style:none}
+  details summary::-webkit-details-marker{display:none}
+  details summary::before{content:"▸ ";color:var(--faint)}
+  details[open] summary::before{content:"▾ "}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="dot"></span>
+  <h1>趨膚效應模擬器</h1>
+  <span class="sub">平面電磁波由介質 A → B · 標注振幅降至 1/e 之深度 δ</span>
+</header>
+
+<!-- 主示波器 -->
+<div class="scope"><canvas id="wave"></canvas></div>
+
+<!-- 對數穿透深度尺 -->
+<div class="scope"><canvas id="meter"></canvas></div>
+
+<div class="grid2">
+  <!-- 控制 -->
+  <div class="panel">
+    <h2>參數控制 <span style="text-transform:none;letter-spacing:0;color:var(--faint);font-weight:400">· 滑桿為對數刻度</span></h2>
+
+    <div class="ctrl">
+      <div class="row"><label>入射波頻率 f</label><span class="val" id="fVal"></span></div>
+      <input id="f" type="range" min="0" max="1" step="0.001" value="0.55">
+    </div>
+
+    <div class="media-head mA"><span class="swatch"></span>介質 A（入射側）</div>
+    <div class="ctrl">
+      <div class="row"><label>相對磁導率 μ<sub>r,A</sub></label><span class="val" id="muAVal"></span></div>
+      <input id="muA" class="a" type="range" min="0" max="1" step="0.001" value="0">
+    </div>
+    <div class="ctrl">
+      <div class="row"><label>電導率 σ<sub>A</sub></label><span class="val" id="sgAVal"></span></div>
+      <input id="sgA" class="a" type="range" min="0" max="1" step="0.001" value="0">
+    </div>
+    <div class="ctrl">
+      <div class="row"><label>相對電容率 ε<sub>r,A</sub></label><span class="val" id="epAVal"></span></div>
+      <input id="epA" class="a" type="range" min="0" max="1" step="0.001" value="0">
+    </div>
+
+    <div class="media-head mB"><span class="swatch"></span>介質 B（穿透側）</div>
+    <div class="ctrl">
+      <div class="row"><label>相對磁導率 μ<sub>r,B</sub></label><span class="val" id="muBVal"></span></div>
+      <input id="muB" class="b" type="range" min="0" max="1" step="0.001" value="0">
+    </div>
+    <div class="ctrl">
+      <div class="row"><label>電導率 σ<sub>B</sub></label><span class="val" id="sgBVal"></span></div>
+      <input id="sgB" class="b" type="range" min="0" max="1" step="0.001" value="0.83">
+    </div>
+    <div class="ctrl">
+      <div class="row"><label>相對電容率 ε<sub>r,B</sub></label><span class="val" id="epBVal"></span></div>
+      <input id="epB" class="b" type="range" min="0" max="1" step="0.001" value="0">
+    </div>
+
+    <div class="media-head mB" style="margin-top:14px"><span class="swatch"></span>介質 B 材料預設</div>
+    <div class="presets" id="presets"></div>
+  </div>
+
+  <!-- 讀數 -->
+  <div class="panel">
+    <h2>介質 B 解析量</h2>
+    <div class="readout" id="readout"></div>
+    <div style="margin-top:14px" class="toolbar">
+      <label><input type="checkbox" id="play" checked> 動畫</label>
+      <label><input type="checkbox" id="autofit" checked> 自動縮放視窗</label>
+      <label title="良導體的透射振幅 |t| 極小（幾乎全反射），不放大就看不到衰減曲線"><input type="checkbox" id="norm" checked> B 區放大至介面振幅</label>
+      <label id="zoomWrap" style="opacity:.4">視窗深度
+        <input id="zoom" type="range" min="0" max="1" step="0.001" value="0.5" style="width:90px" disabled>
+        <span class="val" id="zoomVal"></span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <details>
+    <summary>物理模型與近似（點開）</summary>
+    <p class="note" style="margin-top:10px">
+      本模擬解的是線性均勻等向介質中的<b>馬克士威方程</b>，採時間因子 e<sup>−iωt</sup>。複波數
+      <b> k = α + iβ </b>滿足 k² = ω²με + iωμσ；衰減常數 β 之倒數即趨膚深度
+      <b> δ = 1/β </b>（場振幅 e<sup>−βz</sup>，z=δ 處降為 1/e ≈ 0.368）。內建蕭規曹隨地保留完整
+      ε<sub>c</sub>=ε+iσ/ω，故良導體 / 良介電 / 過渡區皆有效，並非只在 σ≫ωε 的近似式。
+      介面採<b>垂直入射</b>，反射 / 透射係數由本徵阻抗 η=√(μ/ε<sub>c</sub>) 求得：r=(η<sub>B</sub>−η<sub>A</sub>)/(η<sub>B</sub>+η<sub>A</sub>)，
+      t=1+r；A 區顯示入射+反射的部分駐波，B 區為透射衰減波，介面處場連續。
+      <br><br>
+      <b>已知近似：</b>(1) 無限大平面波、單一頻率、垂直入射；(2) 材料參數 ε、μ、σ 與頻率無關（不含色散，真實金屬在光頻段會失準）；
+      (3) 線性、非鐵磁飽和；(4) 為<b>解析解</b>而非數值網格，故無格點解析度假影。動畫的時間流速僅供觀看（真實 ω 下波形會快到看不見），空間衰減則為實際物理。
+    </p>
+  </details>
+</div>
+
+<script>
+(()=>{
+"use strict";
+const EPS0=8.8541878128e-12, MU0=4*Math.PI*1e-7;
+const TAU=2*Math.PI;
+
+/* ---------- 複數 ---------- */
+const cadd=(a,b)=>[a[0]+b[0],a[1]+b[1]];
+const csub=(a,b)=>[a[0]-b[0],a[1]-b[1]];
+const cmul=(a,b)=>[a[0]*b[0]-a[1]*b[1], a[0]*b[1]+a[1]*b[0]];
+const cdiv=(a,b)=>{const d=b[0]*b[0]+b[1]*b[1]||1e-300;return [(a[0]*b[0]+a[1]*b[1])/d,(a[1]*b[0]-a[0]*b[1])/d];};
+const cabs=a=>Math.hypot(a[0],a[1]);
+const csqrt=z=>{const r=Math.hypot(z[0],z[1]);const re=Math.sqrt((r+z[0])/2);let im=Math.sqrt(Math.max(0,(r-z[0])/2));if(z[1]<0)im=-im;return [re,im];};
+// exp(i k z) ，k 複數，z 實數  → e^{-β z}[cos(α z)+ i sin(α z)]
+const cexp_ikz=(k,z)=>{const e=Math.exp(-k[1]*z),a=k[0]*z;return [e*Math.cos(a),e*Math.sin(a)];};
+
+/* ---------- 介質物理 ---------- */
+function medium(epsr,mur,sigma,f){
+  const w=TAU*f, eps=epsr*EPS0, mu=mur*MU0;
+  const k=csqrt([w*w*mu*eps, w*mu*sigma]);        // α + iβ
+  const alpha=k[0], beta=k[1];
+  const delta=beta>1e-300? 1/beta : Infinity;
+  const eta=csqrt(cdiv([w*mu,0],[w*eps,sigma]));   // η = ωμ/k = √(μ/εc)，εc = ε + iσ/ω（e^{-iωt}，與 k 同一慣例）
+  return {alpha,beta,delta,eta,k,
+          lam: alpha>1e-300? TAU/alpha : Infinity,
+          vp:  alpha>1e-300? w/alpha   : Infinity,
+          loss: w*eps>0? sigma/(w*eps) : Infinity};
+}
+
+/* ---------- 滑桿 ↔ 物理值（對數映射） ---------- */
+const logmap=(s,lo,hi)=> lo*Math.pow(hi/lo,s);
+const logInv=(v,lo,hi)=> Math.log(v/lo)/Math.log(hi/lo);
+const F=[1,1e11], MU=[1,5000], EP=[1,90], SG=[1e-8,1e8];   // σ 下限視為≈理想介質
+
+/* ---------- 數值格式 ---------- */
+function fmtLen(m){
+  if(!isFinite(m)) return "∞";
+  const a=Math.abs(m);
+  if(a>=1e3) return (m/1e3).toPrecision(3)+" km";
+  if(a>=1)   return m.toPrecision(3)+" m";
+  if(a>=1e-2)return (m*1e2).toPrecision(3)+" cm";
+  if(a>=1e-3)return (m*1e3).toPrecision(3)+" mm";
+  if(a>=1e-6)return (m*1e6).toPrecision(3)+" µm";
+  if(a>=1e-9)return (m*1e9).toPrecision(3)+" nm";
+  return m.toExponential(2)+" m";
+}
+function fmtFreq(f){
+  if(f>=1e9) return (f/1e9).toPrecision(3)+" GHz";
+  if(f>=1e6) return (f/1e6).toPrecision(3)+" MHz";
+  if(f>=1e3) return (f/1e3).toPrecision(3)+" kHz";
+  return f.toPrecision(3)+" Hz";
+}
+const sci=x=>{ if(!isFinite(x))return "∞"; if(x===0)return "0";
+  const e=Math.floor(Math.log10(Math.abs(x))); const m=x/Math.pow(10,e);
+  return m.toFixed(2)+"e"+(e>=0?"+":"")+e; };
+
+/* ---------- DOM ---------- */
+const $=id=>document.getElementById(id);
+const ids=["f","muA","sgA","epA","muB","sgB","epB","zoom"];
+const el={}; ids.forEach(i=>el[i]=$(i));
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+$("play").checked = !reduce;
+
+/* presets：[εr, μr, σ]（介質B） */
+const PRESETS={
+  "自由空間":[1,1,1e-8],"純水":[80,1,5.5e-6],"濕土":[15,1,1e-2],
+  "海水":[81,1,4],"石墨":[12,1,1e5],"不鏽鋼":[1,1,1.45e6],
+  "鋁 Al":[1,1,3.77e7],"銅 Cu":[1,1,5.96e7],"鐵 Fe(μ高)":[1,1000,1e7]
+};
+const pbox=$("presets");
+Object.entries(PRESETS).forEach(([name,[ep,mu,sg]])=>{
+  const b=document.createElement("button"); b.textContent=name;
+  b.onclick=()=>{
+    el.epB.value=logInv(ep,...EP); el.muB.value=logInv(mu,...MU); el.sgB.value=logInv(sg,...SG);
+    refresh();
+  };
+  pbox.appendChild(b);
+});
+
+/* ---------- canvas 設定 ---------- */
+function setup(c){const ctx=c.getContext("2d");const dpr=Math.min(devicePixelRatio||1,2);
+  const fit=()=>{const r=c.getBoundingClientRect();c.width=r.width*dpr;c.height=r.height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);};
+  fit();return {c,ctx,fit};}
+const W=setup($("wave")), M=setup($("meter"));
+addEventListener("resize",()=>{W.fit();M.fit();draw();});
+
+/* ---------- 全域狀態 ---------- */
+let P={};            // 目前物理參數與介質
+let psi=0, last=0;
+
+function readParams(){
+  const f  = logmap(+el.f.value,...F);
+  const epA= logmap(+el.epA.value,...EP), muA=logmap(+el.muA.value,...MU), sgA=logmap(+el.sgA.value,...SG);
+  const epB= logmap(+el.epB.value,...EP), muB=logmap(+el.muB.value,...MU), sgB=logmap(+el.sgB.value,...SG);
+  const A=medium(epA,muA,sgA,f), B=medium(epB,muB,sgB,f);
+  const r=cdiv(csub(B.eta,A.eta), cadd(B.eta,A.eta));
+  const t=cadd([1,0],r);
+  return {f,epA,muA,sgA,epB,muB,sgB,A,B,r,t,
+          rMag:cabs(r), tMag:cabs(t)};
+}
+
+function regimeText(B){
+  if(B.loss>1e3) return ["良導體 (good conductor)","σ ≫ ωε，δ≈1/√(πfμσ)，本徵阻抗相位 −45°（e<sup>−iωt</sup> 慣例）"];
+  if(B.loss<1e-2) return ["低損介電 (low-loss dielectric)","σ ≪ ωε，波幾乎不衰減，δ 極深"];
+  return ["過渡區 (quasi-conductor)","σ ~ ωε，須用完整複波數，不可套近似式"];
+}
+
+/* ---------- 主波形繪製 ---------- */
+function draw(){
+  const {ctx,c}=W; const w=c.clientWidth, h=c.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  const mid=h*0.5, amp=h*0.30;
+  const ixFrac=0.30, ix=Math.round(w*ixFrac);   // 介面 x 像素
+
+  const {A,B,r,t,tMag}=P;
+
+  /* 視窗物理寬度 */
+  const lamA=isFinite(A.lam)?A.lam:1;
+  let WA = 2.2*lamA;
+  let WB;
+  if($("autofit").checked){
+    const lamB=isFinite(B.lam)?B.lam:1;
+    WB = isFinite(B.delta)? Math.min(5.2*B.delta, 11*lamB) : 11*lamB;
+  }else{
+    // 手動：視窗深度 = δ 的 0.5×~20× （對數）
+    const base=isFinite(B.delta)?B.delta:(isFinite(B.lam)?B.lam*3:1);
+    WB = base*logmap(+el.zoom.value,0.4,25);
+  }
+  const pxPerM_B=(w-ix)/WB, pxPerM_A=ix/WA;
+
+  /* 背景：兩介質色塊 */
+  ctx.fillStyle="rgba(34,211,238,.045)"; ctx.fillRect(0,0,ix,h);
+  ctx.fillStyle="rgba(192,132,252,.06)"; ctx.fillRect(ix,0,w-ix,h);
+
+  /* 格線 */
+  ctx.lineWidth=1; ctx.strokeStyle="rgba(40,72,96,.28)";
+  for(let gy=0.1;gy<1;gy+=0.1){ctx.beginPath();ctx.moveTo(0,gy*h);ctx.lineTo(w,gy*h);ctx.stroke();}
+  ctx.strokeStyle="rgba(231,237,243,.12)";ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(w,mid);ctx.stroke();
+
+  /* 包絡填色（介質B透射衰減） */
+  const nrm=($("norm").checked && tMag>1e-300)? 1/tMag : 1;     // 僅作顯示放大，物理量讀數不受影響
+  const env=z=> tMag*nrm*Math.exp(-B.beta*z);
+  ctx.fillStyle="rgba(192,132,252,.10)";
+  ctx.beginPath();
+  let started=false;
+  for(let x=ix;x<=w;x+=2){const z=(x-ix)/pxPerM_B;const e=env(z)*amp; if(!started){ctx.moveTo(x,mid-e);started=true;}else ctx.lineTo(x,mid-e);}
+  for(let x=w;x>=ix;x-=2){const z=(x-ix)/pxPerM_B;const e=env(z)*amp;ctx.lineTo(x,mid+e);}
+  ctx.closePath();ctx.fill();
+  // 包絡線
+  ctx.strokeStyle="rgba(192,132,252,.45)";ctx.lineWidth=1;
+  for(const s of [-1,1]){ctx.beginPath();let st=false;
+    for(let x=ix;x<=w;x+=2){const z=(x-ix)/pxPerM_B;const y=mid+s*env(z)*amp;st?ctx.lineTo(x,y):(ctx.moveTo(x,y),st=true);}ctx.stroke();}
+
+  /* 波形 A（入射+反射） */
+  const cphase=[Math.cos(psi),-Math.sin(psi)];   // e^{-iψ}
+  ctx.lineWidth=2; ctx.strokeStyle="#22d3ee";
+  ctx.beginPath();let st=false;
+  for(let x=0;x<=ix;x+=1.5){
+    const z=(x-ix)/pxPerM_A;                       // z<0
+    const inc=cexp_ikz(A.k,z), ref=cmul(r,cexp_ikz([-A.k[0],-A.k[1]],z));
+    const E=cmul(cadd(inc,ref),cphase)[0];
+    const y=mid-E*amp; st?ctx.lineTo(x,y):(ctx.moveTo(x,y),st=true);
+  }ctx.stroke();
+
+  /* 波形 B（透射衰減） */
+  ctx.strokeStyle="#c084fc"; ctx.shadowColor="#c084fc"; ctx.shadowBlur=6;
+  ctx.beginPath();st=false;
+  for(let x=ix;x<=w;x+=1.5){
+    const z=(x-ix)/pxPerM_B;
+    const E=cmul(cmul(t,cexp_ikz(B.k,z)),cphase)[0]*nrm;
+    const y=mid-E*amp; st?ctx.lineTo(x,y):(ctx.moveTo(x,y),st=true);
+  }ctx.stroke();ctx.shadowBlur=0;
+
+  /* 介面線 */
+  ctx.strokeStyle="rgba(231,237,243,.6)";ctx.lineWidth=1.5;
+  ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(ix,0);ctx.lineTo(ix,h);ctx.stroke();ctx.setLineDash([]);
+
+  /* δ（1/e）標注 */
+  ctx.font="11px ui-monospace,monospace";
+  function vline(z,color,dash,label,sub){
+    const x=ix+z*pxPerM_B; if(x>w+2) {return offmark(label,sub);}
+    ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.setLineDash(dash);
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();ctx.setLineDash([]);
+    return x;
+  }
+  function offmark(label,sub){
+    ctx.fillStyle="#fbbf24";ctx.textAlign="right";
+    ctx.fillText("δ → 視窗外",w-10,36);
+    ctx.fillStyle="#7c8da0";ctx.fillText(sub,w-10,52);ctx.textAlign="left";return null;
+  }
+  if(isFinite(B.delta)){
+    // 2δ,3δ 輔助
+    [[2,"rgba(251,191,36,.25)"],[3,"rgba(251,191,36,.18)"]].forEach(([n,col])=>{
+      const x=ix+n*B.delta*pxPerM_B; if(x<w){ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash([2,4]);
+        ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle="rgba(251,191,36,.4)";ctx.textAlign="center";ctx.fillText(n+"δ",x,h-8);ctx.textAlign="left";}
+    });
+    const xd=vline(B.delta,"#fbbf24",[5,3]);
+    // 1/e 水平準位
+    const lvl=tMag*nrm*Math.exp(-1)*amp;
+    ctx.strokeStyle="rgba(251,191,36,.35)";ctx.setLineDash([2,3]);
+    ctx.beginPath();ctx.moveTo(ix,mid-lvl);ctx.lineTo(Math.min(xd||w,w),mid-lvl);ctx.stroke();ctx.setLineDash([]);
+    if(xd!==null){
+      ctx.fillStyle="#fbbf24";ctx.textAlign="center";
+      ctx.fillText("δ = "+fmtLen(B.delta), xd, 36);
+      ctx.font="10px ui-monospace,monospace";
+      ctx.fillText("振幅 ↓ 1/e ≈ 0.368", xd, 52);
+      ctx.font="11px ui-monospace,monospace";ctx.textAlign="left";
+    }
+  }else{
+    offmark("","低損→δ 極深");
+  }
+
+  /* 介質標籤 */
+  ctx.fillStyle="#22d3ee";ctx.font="10px ui-monospace,monospace";ctx.fillText("介質 A",10,16);
+  ctx.fillStyle="#c084fc";ctx.fillText("介質 B（透射）"+(nrm!==1?"　顯示放大 ×"+sci(nrm)+"（實際 |t|="+tMag.toFixed(4)+"）":""),ix+8,16);
+  // 深度標尺
+  ctx.fillStyle="#46566a";ctx.textAlign="right";
+  ctx.fillText("深度 z →  視窗 "+fmtLen(WB),w-8,h-8);ctx.textAlign="left";
+  ctx.fillStyle="#46566a";ctx.fillText("← A 視窗 "+fmtLen(WA)+"（2.2 λ）",10,h-8);
+}
+
+/* ---------- 對數穿透深度尺 ---------- */
+function drawMeter(){
+  const {ctx,c}=M; const w=c.clientWidth, h=c.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  const lo=-10, hi=4;                 // 0.1 nm … 10 km（log10 m）
+  const pad=46, x0=pad, x1=w-pad, ymid=h*0.62;
+  const X=L=>x0+(L-lo)/(hi-lo)*(x1-x0);
+
+  ctx.fillStyle="#7c8da0";ctx.font="10px ui-monospace,monospace";ctx.textAlign="left";
+  ctx.fillText("穿透深度 δ", 10, 16);
+
+  // 軌道
+  ctx.strokeStyle="#1b2632";ctx.lineWidth=3;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(x0,ymid);ctx.lineTo(x1,ymid);ctx.stroke();
+
+  const ticks=[[-9,"nm"],[-6,"µm"],[-3,"mm"],[-2,"cm"],[0,"m"],[3,"km"]];
+  ctx.font="9.5px ui-monospace,monospace";
+  ticks.forEach(([L,lab])=>{const x=X(L);
+    ctx.strokeStyle="#2a3a4a";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,ymid-7);ctx.lineTo(x,ymid+7);ctx.stroke();
+    ctx.fillStyle="#46566a";ctx.textAlign="center";ctx.fillText(lab,x,ymid+22);});
+
+  const d=P.B.delta;
+  ctx.textAlign="center";
+  if(isFinite(d)){
+    let L=Math.log10(d); L=Math.max(lo,Math.min(hi,L));
+    const x=X(L);
+    // 已填軌
+    ctx.strokeStyle="#fbbf24";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x0,ymid);ctx.lineTo(x,ymid);ctx.stroke();
+    // 標記
+    ctx.fillStyle="#fbbf24";ctx.shadowColor="#fbbf24";ctx.shadowBlur=12;
+    ctx.beginPath();ctx.arc(x,ymid,7,0,TAU);ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle="#06080c";ctx.beginPath();ctx.arc(x,ymid,2.5,0,TAU);ctx.fill();
+    ctx.fillStyle="#fbbf24";ctx.font="12px ui-monospace,monospace";
+    ctx.fillText("δ = "+fmtLen(d), x, ymid-16);
+  }else{
+    const x=x1;
+    ctx.strokeStyle="#fbbf24";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x0,ymid);ctx.lineTo(x,ymid);ctx.stroke();
+    ctx.fillStyle="#fbbf24";ctx.font="12px ui-monospace,monospace";ctx.fillText("δ → ∞（近乎無衰減）",(x0+x1)/2,ymid-16);
+  }
+}
+
+/* ---------- 讀數面板 ---------- */
+function drawReadout(){
+  const {B,rMag,tMag,A}=P;
+  const [reg,regSub]=regimeText(B);
+  const item=(k,v)=>`<div class="item"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+  $("readout").innerHTML=
+    `<div class="item hero-delta"><span class="k">趨膚深度 δ = 1/β（振幅降至 1/e）</span><span class="v">${fmtLen(B.delta)}</span></div>`
+    +item("衰減常數 β","<span class='v'>"+sci(B.beta)+" <small>rad/m</small></span>")
+    +item("相位常數 α", sci(B.alpha)+" <small>rad/m</small>")
+    +item("介質B波長 λ", fmtLen(B.lam))
+    +item("相速度 v_p", sci(B.vp)+" <small>m/s</small>")
+    +item("損耗正切 σ/ωε", sci(B.loss))
+    +item("|本徵阻抗 η_B|", sci(cabs(B.eta))+" <small>Ω</small>")
+    +item("反射係數 |r|", rMag.toFixed(4))
+    +item("透射係數 |t|", tMag.toFixed(4))
+    +`<div class="regime"><b>${reg}</b> — ${regSub}</div>`;
+}
+
+/* ---------- 數值標籤 ---------- */
+function labels(){
+  $("fVal").textContent=fmtFreq(logmap(+el.f.value,...F));
+  $("muAVal").textContent="μr="+logmap(+el.muA.value,...MU).toPrecision(3);
+  $("sgAVal").textContent="σ="+sci(logmap(+el.sgA.value,...SG))+" S/m";
+  $("epAVal").textContent="εr="+logmap(+el.epA.value,...EP).toPrecision(3);
+  $("muBVal").textContent="μr="+logmap(+el.muB.value,...MU).toPrecision(3);
+  $("sgBVal").textContent="σ="+sci(logmap(+el.sgB.value,...SG))+" S/m";
+  $("epBVal").textContent="εr="+logmap(+el.epB.value,...EP).toPrecision(3);
+  $("zoomVal").textContent="×"+logmap(+el.zoom.value,0.4,25).toPrecision(2);
+}
+
+/* ---------- 更新 ---------- */
+function refresh(){ P=readParams(); labels(); drawReadout(); drawMeter(); draw(); }
+ids.forEach(i=>el[i].addEventListener("input",refresh));
+$("autofit").addEventListener("change",e=>{
+  const on=e.target.checked; el.zoom.disabled=on; $("zoomWrap").style.opacity=on?.4:1; refresh();
+});
+$("norm").addEventListener("change",refresh);
+
+/* ---------- 動畫 ---------- */
+function loop(ts){
+  if($("play").checked){ const dt=Math.min(0.05,(ts-last)/1000||0); psi+=dt*2.2; draw(); }
+  last=ts; requestAnimationFrame(loop);
+}
+refresh();
+requestAnimationFrame(t=>{last=t;requestAnimationFrame(loop);});
+})();
+</script>
+</body>
+</html>

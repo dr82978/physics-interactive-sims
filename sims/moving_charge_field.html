@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>運動電荷的場 — 相對論性場視鏡</title>
+<style>
+  :root{
+    --bg:#0a0d14; --panel:#10141f; --panel2:#161c2b; --line:#1e2638;
+    --ink:#e9eef7; --muted:#8a96ad; --faint:#5b6786;
+    --e:#33d6e6;        /* 電場 cyan */
+    --b:#ffb13d;        /* 磁場 amber */
+    --rad:#bf7dff;      /* 輻射 violet */
+    --charge:#ffffff;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,"PingFang TC","Noto Sans TC",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans)}
+  body{padding:22px;line-height:1.5}
+  .app{max-width:1180px;margin:0 auto}
+  header{margin-bottom:18px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint)}
+  h1{font-size:clamp(20px,3.4vw,30px);margin:.25em 0 .15em;font-weight:650;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:14px;max-width:62ch}
+  .stage{display:grid;grid-template-columns:minmax(0,max(320px,calc(100vh - 200px))) 320px;justify-content:center;gap:18px;align-items:start}
+  @media(max-width:820px){.stage{grid-template-columns:1fr}}
+  .canvas-wrap{position:relative;background:radial-gradient(120% 120% at 50% 45%,#0e1320 0%,#080b11 100%);
+    border:1px solid var(--line);border-radius:14px;overflow:hidden;aspect-ratio:1/1}
+  canvas{position:absolute;inset:0;display:block;width:100%;height:100%}
+  .badge{position:absolute;left:12px;top:11px;font-family:var(--mono);font-size:11px;color:var(--faint);
+    letter-spacing:.05em;pointer-events:none}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 16px 18px}
+  .grp{margin-bottom:18px}
+  .grp:last-child{margin-bottom:0}
+  .lab{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
+  .lab .name{font-size:12.5px;color:var(--muted);letter-spacing:.02em}
+  .lab .unit{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+  input[type=number]{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+    font-family:var(--mono);font-size:14px;padding:9px 10px;border-radius:8px;outline:none}
+  input[type=number]:focus{border-color:var(--e);box-shadow:0 0 0 2px rgba(51,214,230,.18)}
+  input[type=range]{width:100%;margin:11px 0 2px;-webkit-appearance:none;appearance:none;height:4px;
+    border-radius:4px;background:var(--line);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;
+    background:var(--e);border:2px solid var(--bg);cursor:pointer;box-shadow:0 0 0 1px var(--e)}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--e);
+    border:2px solid var(--bg);cursor:pointer}
+  #aRange::-webkit-slider-thumb{background:var(--rad);box-shadow:0 0 0 1px var(--rad)}
+  #aRange::-moz-range-thumb{background:var(--rad)}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .chip{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--panel2);
+    border:1px solid var(--line);border-radius:999px;padding:4px 9px;cursor:pointer;transition:.12s}
+  .chip:hover{color:var(--ink);border-color:var(--e)}
+  .readout{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);
+    border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .cell{background:var(--panel2);padding:9px 11px}
+  .cell .k{font-size:10.5px;color:var(--faint);letter-spacing:.04em}
+  .cell .v{font-family:var(--mono);font-size:15px;color:var(--ink);margin-top:2px}
+  .cell.wide{grid-column:1/3}
+  .legend{font-size:12px;color:var(--muted);display:grid;gap:9px}
+  .lk{display:flex;gap:9px;align-items:flex-start}
+  .sw{flex:0 0 auto;width:22px;height:0;border-top-width:2.5px;border-top-style:solid;margin-top:9px}
+  .sw.e{border-top-color:var(--e)} .sw.r{border-top-color:var(--rad)}
+  .sw.b{border:0;width:22px;height:14px;margin-top:2px;color:var(--b);font-family:var(--mono);
+    font-size:13px;line-height:14px;text-align:center}
+  .legend b{color:var(--ink);font-weight:600}
+  .note{font-size:11.5px;color:var(--faint);line-height:1.55;margin-top:6px;border-top:1px solid var(--line);padding-top:11px}
+  .note code{font-family:var(--mono);color:var(--muted)}
+  button:focus-visible,.chip:focus-visible,input:focus-visible{outline:2px solid var(--e);outline-offset:2px}
+  h3{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);
+    font-family:var(--mono);font-weight:500;margin:0 0 11px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="eyebrow">Liénard–Wiechert · special relativity</div>
+    <h1>運動電荷的場 — 相對論性場視鏡</h1>
+    <p class="sub">靜止觀察者所見、一個沿 +x 方向運動並同向加速（共線 <i>a</i>∥<i>v</i>，直線加速器／軔致輻射幾何）之點電荷的場。電場線顯示相對論壓縮，磁場垂直於運動平面，輻射依 Liénard 角分佈標出。</p>
+  </header>
+
+  <div class="stage">
+    <div class="canvas-wrap">
+      <canvas id="view"></canvas>
+      <div class="badge">觀察者參考系 · 運動平面 (x–y)</div>
+    </div>
+
+    <aside class="panel">
+      <div class="grp">
+        <div class="lab"><span class="name">速度 v</span><span class="unit">m·s⁻¹ · 0 → c</span></div>
+        <input id="vNum" type="number" min="0" max="299792458" step="1" value="240000000">
+        <input id="vRange" type="range" min="0" max="299792458" step="299.792458" value="240000000">
+        <div class="chips" id="vChips">
+          <span class="chip" data-b="0">靜止</span>
+          <span class="chip" data-b="0.5">0.5c</span>
+          <span class="chip" data-b="0.8">0.8c</span>
+          <span class="chip" data-b="0.9">0.9c</span>
+          <span class="chip" data-b="0.99">0.99c</span>
+          <span class="chip" data-b="0.999">0.999c</span>
+        </div>
+      </div>
+
+      <div class="grp">
+        <div class="lab"><span class="name">加速度 a（沿運動方向）</span><span class="unit">m·s⁻² · 0 → 9999</span></div>
+        <input id="aNum" type="number" min="0" max="9999" step="1" value="3000">
+        <input id="aRange" type="range" min="0" max="9999" step="1" value="3000">
+      </div>
+
+      <div class="grp">
+        <h3>讀數</h3>
+        <div class="readout">
+          <div class="cell"><div class="k">β = v/c</div><div class="v" id="rB">—</div></div>
+          <div class="cell"><div class="k">γ（勞侖茲因子）</div><div class="v" id="rG">—</div></div>
+          <div class="cell"><div class="k">橫向 E 增強</div><div class="v" id="rPerp">—</div></div>
+          <div class="cell"><div class="k">縱向 E</div><div class="v" id="rPar">—</div></div>
+          <div class="cell wide"><div class="k">輻射峰值方向 θ_peak（離運動軸）</div><div class="v" id="rTheta">—</div></div>
+          <div class="cell wide"><div class="k">輻射總功率 P（電子, Liénard）</div><div class="v" id="rPow">—</div></div>
+        </div>
+      </div>
+
+      <div class="grp">
+        <h3>圖例</h3>
+        <div class="legend">
+          <div class="lk"><span class="sw e"></span><span><b>電場線</b>　由電荷現位置放射（+q 朝外）。每條線攜帶等量電通量，方向滿足 <code>tanθ = γ·tanθ₀</code>：高速時場線擠向垂直運動方向（該處場強為靜止時的 γ 倍），壓縮成餅狀。</span></div>
+          <div class="lk"><span class="sw b">⊙⊗</span><span><b>磁場</b>　B 垂直運動平面：上方 ⊙ 出紙面、下方 ⊗ 入紙面（B 力線是繞運動軸的圓，此為端視圖）。標記<b>大小／密度</b>＝|B|。</span></div>
+          <div class="lk"><span class="sw r"></span><span><b>輻射</b>　紫色波瓣＝角功率分佈 dP/dΩ，箭頭標出峰值（前傾）方向。</span></div>
+        </div>
+        <p class="note">場線為等速場（相對論性庫侖場）之嚴格解，沿現位置呈直線輻射；<code>a</code> 對場線形狀的修正在實驗室加速度量級下可忽略，故輻射以<b>角分佈波瓣（自動縮放）</b>呈現其方向與形狀——在 lab 尺度下其絕對場強相對速度場極小。共線情形 <code>dP/dΩ ∝ sin²θ /(1−β cosθ)⁵</code>。</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+const C = 299792458, EPS0 = 8.8541878128e-12, QE = 1.602176634e-19;
+const cv = document.getElementById('view'), ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+let v = 240000000, a = 3000;
+
+/* ---------- physics ---------- */
+// relativistic Coulomb (velocity-field) strength factor, angle φ from motion axis
+function fField(beta, sin2){ const b2=beta*beta; return (1-b2)/Math.pow(1-b2*sin2,1.5); }
+// angular power distribution, collinear a∥v
+function radPattern(beta, phi){ const s=Math.sin(phi); return s*s/Math.pow(1-beta*Math.cos(phi),5); }
+
+// E 場線：3D 軸對稱場的「等通量」配置。靜止電荷的場線在 θ₀ 均勻分布；
+// 以速度 β 運動時，每條線通過的通量不變，推得 tanθ = γ·tanθ₀（場線被壓向垂直方向）。
+// 因此線的疏密正比於通量密度，高速時呈「餅狀」。
+function fieldLineAngles(beta, N){
+  const g=1/Math.sqrt(1-beta*beta), out=[];
+  for(let k=0;k<N;k++){ const th0=k/N*2*Math.PI;
+    out.push(Math.atan2(g*Math.sin(th0), Math.cos(th0))); }
+  return out;
+}
+function peakRadAngle(beta){
+  if(beta<1e-9) return Math.PI/2;
+  const cphi=(Math.sqrt(1+15*beta*beta)-1)/(3*beta);
+  return Math.acos(Math.max(-1,Math.min(1,cphi)));
+}
+function lienardPower(beta, acc){ const g2=1/(1-beta*beta); const g6=g2*g2*g2;
+  return QE*QE*acc*acc*g6/(6*Math.PI*EPS0*C*C*C); }
+
+/* ---------- render ---------- */
+function fit(){ const r=cv.getBoundingClientRect(), dpr=Math.min(2,window.devicePixelRatio||1);
+  cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0); return {w:r.width,h:r.height}; }
+
+function arrow(x0,y0,x1,y1,color,w,head){
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=w;
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+  const ang=Math.atan2(y1-y0,x1-x0), h=head;
+  ctx.beginPath(); ctx.moveTo(x1,y1);
+  ctx.lineTo(x1-h*Math.cos(ang-0.4),y1-h*Math.sin(ang-0.4));
+  ctx.lineTo(x1-h*Math.cos(ang+0.4),y1-h*Math.sin(ang+0.4));
+  ctx.closePath(); ctx.fill();
+}
+
+function draw(){
+  const {w,h}=fit(), cx=w/2, cy=h/2, beta=Math.min(v/C,0.99999999);
+  const R=Math.min(w,h)*0.5, lineLen=R*0.82;
+  ctx.clearRect(0,0,w,h);
+
+  // motion axis
+  ctx.strokeStyle='#1c2536'; ctx.lineWidth=1; ctx.setLineDash([4,5]);
+  ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(w,cy); ctx.stroke(); ctx.setLineDash([]);
+
+  /* ---- B field markers (⊙ out / ⊗ into), size & alpha ∝ |B| ---- */
+  if(beta>1e-6){
+    const step=Math.max(30,Math.round(R/7)), pts=[]; let bmax=0;
+    for(let px=cx-lineLen;px<=cx+lineLen;px+=step) for(let py=cy-lineLen;py<=cy+lineLen;py+=step){
+      const dx=px-cx, dy=-(py-cy), r=Math.hypot(dx,dy);
+      if(r<R*0.16||r>lineLen) continue;
+      const sin=Math.abs(dy)/r, s2=(dy*dy)/(r*r);
+      const E=fField(beta,s2)/(r*r), Bmag=beta*E*sin; // ∝ |B|
+      if(dy===0) continue;
+      pts.push({px,py,B:Bmag,up:dy>0}); if(Bmag>bmax)bmax=Bmag;
+    }
+    ctx.font='13px '+getComputedStyle(document.body).getPropertyValue('--mono');
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    for(const p of pts){ const t=Math.pow(p.B/bmax,0.5); if(t<0.12)continue;
+      const sz=4+t*5; ctx.globalAlpha=0.25+0.6*t; ctx.strokeStyle='#ffb13d'; ctx.fillStyle='#ffb13d';
+      ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(p.px,p.py,sz,0,2*Math.PI); ctx.stroke();
+      if(p.up){ ctx.beginPath(); ctx.arc(p.px,p.py,sz*0.32,0,2*Math.PI); ctx.fill(); }      // ⊙ dot
+      else { ctx.lineWidth=1.2; const d=sz*0.62;                                            // ⊗ cross
+        ctx.beginPath(); ctx.moveTo(p.px-d,p.py-d); ctx.lineTo(p.px+d,p.py+d);
+        ctx.moveTo(p.px-d,p.py+d); ctx.lineTo(p.px+d,p.py-d); ctx.stroke(); }
+    }
+    ctx.globalAlpha=1;
+  }
+
+  /* ---- radiation lobe (angular distribution) + peak arrows ---- */
+  if(a>0){
+    const Nang=240; let pmax=0;
+    for(let i=0;i<Nang;i++){ const phi=i/Nang*2*Math.PI; const p=radPattern(beta,phi); if(p>pmax)pmax=p; }
+    const R0=R*0.80, tips=[];
+    for(let i=0;i<=Nang;i++){ const phi=i/Nang*2*Math.PI, rr=R0*radPattern(beta,phi)/pmax;
+      tips.push([cx+rr*Math.cos(phi), cy-rr*Math.sin(phi)]); }
+    ctx.beginPath(); ctx.moveTo(tips[0][0],tips[0][1]);
+    for(let i=1;i<tips.length;i++) ctx.lineTo(tips[i][0],tips[i][1]); ctx.closePath();
+    ctx.fillStyle='rgba(191,125,255,0.13)'; ctx.fill();
+    ctx.strokeStyle='rgba(191,125,255,0.55)'; ctx.lineWidth=1.5; ctx.stroke();
+    const pk=peakRadAngle(beta), rr=R0; // two symmetric peaks (±θ)
+    for(const sgn of [1,-1]) arrow(cx,cy, cx+rr*Math.cos(pk), cy-sgn*rr*Math.sin(pk), '#bf7dff', 2.4, 9);
+  }
+
+  /* ---- E field lines (density ∝ |E|) ---- */
+  const angles=fieldLineAngles(beta, 24), r0=R*0.12;
+  for(const phi of angles){
+    const dx=Math.cos(phi), dy=Math.sin(phi);
+    arrow(cx+r0*dx, cy-r0*dy, cx+lineLen*dx, cy-lineLen*dy, 'rgba(51,214,230,0.85)', 1.4, 7);
+  }
+
+  /* ---- the charge ---- */
+  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,16);
+  g.addColorStop(0,'rgba(255,255,255,0.9)'); g.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,16,0,2*Math.PI); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(cx,cy,5.5,0,2*Math.PI); ctx.fill();
+  ctx.fillStyle='#0a0d14'; ctx.font='bold 9px '+getComputedStyle(document.body).getPropertyValue('--mono');
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('+',cx,cy+0.5);
+  // velocity indicator
+  if(beta>1e-6) arrow(cx,cy, cx+R*0.20+R*0.20*beta, cy, 'rgba(255,255,255,0.55)', 2, 7);
+
+  readouts(beta);
+}
+
+function readouts(beta){
+  const g=1/Math.sqrt(1-beta*beta);
+  $('rB').textContent=beta.toFixed(beta>0.99?6:4);
+  $('rG').textContent=g.toFixed(g>10?2:4);
+  $('rPerp').textContent='× '+g.toFixed(g>10?1:3);
+  $('rPar').textContent='÷ '+(g*g).toFixed(g*g>100?0:2);
+  const th=peakRadAngle(beta)*180/Math.PI;
+  $('rTheta').textContent=(a>0?th.toFixed(1)+' °':'—（無加速）');
+  $('rPow').textContent=(a>0?lienardPower(beta,a).toExponential(3)+' W':'0 W');
+}
+
+/* ---------- bindings ---------- */
+function setV(val){ v=Math.max(0,Math.min(C,val)); $('vNum').value=Math.round(v); $('vRange').value=v; draw(); }
+function setA(val){ a=Math.max(0,Math.min(9999,val)); $('aNum').value=Math.round(a); $('aRange').value=a; draw(); }
+$('vNum').addEventListener('input',e=>setV(+e.target.value||0));
+$('vRange').addEventListener('input',e=>setV(+e.target.value));
+$('aNum').addEventListener('input',e=>setA(+e.target.value||0));
+$('aRange').addEventListener('input',e=>setA(+e.target.value));
+$('vChips').addEventListener('click',e=>{ const b=e.target.dataset.b; if(b!=null) setV(parseFloat(b)*C); });
+window.addEventListener('resize',draw);
+new ResizeObserver(draw).observe(cv);
+setV(v); setA(a); draw();
+</script>
+</body>
+</html>
