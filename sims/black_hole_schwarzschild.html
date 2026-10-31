@@ -9,20 +9,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+TC:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#05060c;
-    --bg2:#0a0e1c;
-    --ink:#e9ecf5;
-    --muted:#8b93ad;
-    --faint:#5b6480;
-    --line:rgba(140,160,210,.14);
-    --panel:rgba(16,20,38,.62);
-    --warm:#ff9c45;
-    --warm2:#ff5e3a;
-    --cool:#62d5ff;
-    --cool2:#3aa0ff;
-    --gold:#f3c969;
-    --ok:#54e0a6;
-    --crit:#ff7a5c;
+    --bg:#f7f3ea;
+    --bg2:#efe9db;
+    --ink:#26303b;
+    --muted:#566170;
+    --faint:#7d8794;
+    --line:#ddd5c4;
+    --panel:rgba(255,253,248,.88);
+    --warm:#c26d00;
+    --warm2:#c2412d;
+    --cool:#0b6f9c;
+    --cool2:#2f7fc4;
+    --gold:#a86b00;
+    --ok:#1f8a5b;
+    --crit:#c2412d;
     --mono:'IBM Plex Mono',ui-monospace,monospace;
     --sans:'IBM Plex Sans TC',system-ui,sans-serif;
     --disp:'Fraunces',Georgia,serif;
@@ -31,16 +31,16 @@
   html,body{height:100%}
   body{
     background:
-      radial-gradient(1200px 700px at 78% -8%, rgba(60,90,180,.16), transparent 60%),
-      radial-gradient(900px 600px at 8% 108%, rgba(120,60,160,.12), transparent 55%),
-      linear-gradient(180deg,var(--bg),var(--bg2) 60%, #04050a);
+      radial-gradient(1200px 700px at 78% -8%, rgba(47,127,196,.08), transparent 60%),
+      radial-gradient(900px 600px at 8% 108%, rgba(194,109,0,.06), transparent 55%),
+      linear-gradient(180deg,var(--bg),var(--bg2));
     color:var(--ink);
     font-family:var(--sans);
     min-height:100vh;
     -webkit-font-smoothing:antialiased;
     overflow-x:hidden;
   }
-  .grain{position:fixed;inset:0;pointer-events:none;opacity:.035;z-index:50;
+  .grain{position:fixed;inset:0;pointer-events:none;opacity:.025;z-index:50;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
   header{
     max-width:1320px;margin:0 auto;padding:34px 28px 6px;
@@ -52,7 +52,7 @@
   h1 em{font-style:italic;color:var(--gold)}
   .sub{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.05em}
   .eq{font-family:var(--mono);font-size:13px;color:var(--muted);
-    border:1px solid var(--line);border-radius:999px;padding:8px 16px;background:rgba(255,255,255,.02)}
+    border:1px solid var(--line);border-radius:999px;padding:8px 16px;background:#fffdf8}
   .eq b{color:var(--cool)}
 
   main{max-width:1320px;margin:0 auto;padding:18px 28px 60px;
@@ -60,20 +60,20 @@
   @media(max-width:980px){main{grid-template-columns:1fr;padding:14px 16px 50px}}
 
   .stage{position:relative;border:1px solid var(--line);border-radius:20px;overflow:hidden;
-    background:radial-gradient(120% 120% at 50% 40%, rgba(20,26,52,.55), rgba(6,8,16,.9));
-    box-shadow:0 30px 80px -40px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.04)}
+    background:radial-gradient(120% 120% at 50% 40%, #fffdf8, #f1ece0);
+    box-shadow:0 24px 60px -36px rgba(38,48,59,.35)}
   canvas{display:block;width:100%;height:auto;aspect-ratio:1/1}
   .badge{position:absolute;left:16px;top:14px;z-index:3;
     font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
     padding:8px 14px;border-radius:999px;border:1px solid var(--line);
-    background:rgba(8,10,20,.6);backdrop-filter:blur(8px);display:flex;align-items:center;gap:9px;
+    background:rgba(255,253,248,.85);backdrop-filter:blur(8px);display:flex;align-items:center;gap:9px;
     transition:.5s}
   .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 12px var(--ok);transition:.5s}
-  .badge.bh{border-color:rgba(255,140,90,.5);color:var(--crit)}
+  .badge.bh{border-color:rgba(194,65,45,.5);color:var(--crit)}
   .badge.bh .dot{background:var(--crit);box-shadow:0 0 14px var(--crit)}
   .scaleNote{position:absolute;right:14px;bottom:12px;z-index:3;
     font-family:var(--mono);font-size:10.5px;color:var(--muted);text-align:right;line-height:1.5;
-    background:rgba(6,8,16,.45);padding:6px 10px;border-radius:8px;max-width:62%}
+    background:rgba(255,253,248,.8);padding:6px 10px;border-radius:8px;max-width:62%}
 
   .controls{display:flex;flex-direction:column;gap:16px}
   .card{border:1px solid var(--line);border-radius:16px;background:var(--panel);
@@ -89,20 +89,20 @@
   .ctl label .sym{font-family:var(--mono);color:var(--gold);font-size:13px}
   .field{display:flex;align-items:center;gap:6px}
   .field input{
-    width:150px;background:rgba(0,0,0,.32);border:1px solid var(--line);border-radius:9px;
+    width:150px;background:#fff;border:1px solid var(--line);border-radius:9px;
     color:var(--ink);font-family:var(--mono);font-size:13px;padding:7px 9px;text-align:right;outline:none;transition:.2s}
-  .field input:focus{border-color:var(--cool);box-shadow:0 0 0 3px rgba(98,213,255,.12)}
+  .field input:focus{border-color:var(--cool);box-shadow:0 0 0 3px rgba(11,111,156,.14)}
   .field .unit{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:18px}
 
   input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:99px;outline:none;
     background:linear-gradient(90deg,var(--cool2),var(--gold),var(--warm2));}
-  input[type=range].mass{background:linear-gradient(90deg,#2a3a66,var(--gold),var(--warm2));}
-  input[type=range].rad{background:linear-gradient(90deg,#2a3a66,var(--cool),#bfe9ff);}
+  input[type=range].mass{background:linear-gradient(90deg,#e8d9b5,var(--gold),var(--warm2));}
+  input[type=range].rad{background:linear-gradient(90deg,#c9d6e6,var(--cool),#7cc4e6);}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;
-    background:radial-gradient(circle at 35% 30%,#fff,#cfd7ee 40%,#8893b6);
-    border:1px solid rgba(255,255,255,.7);cursor:grab;box-shadow:0 2px 10px rgba(0,0,0,.6),0 0 0 6px rgba(255,255,255,.05)}
-  input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;border:1px solid #fff;
-    background:radial-gradient(circle at 35% 30%,#fff,#cfd7ee 40%,#8893b6);cursor:grab}
+    background:radial-gradient(circle at 35% 30%,#fff,#eef1f6 40%,#b9c2d2);
+    border:1px solid #9aa6b8;cursor:grab;box-shadow:0 2px 8px rgba(38,48,59,.3),0 0 0 6px rgba(38,48,59,.05)}
+  input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;border:1px solid #9aa6b8;
+    background:radial-gradient(circle at 35% 30%,#fff,#eef1f6 40%,#b9c2d2);cursor:grab}
   input[type=range]:active::-webkit-slider-thumb{cursor:grabbing;transform:scale(1.08)}
   .ticks{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:7px;opacity:.7}
   .ticks span{color:var(--muted)}
@@ -116,11 +116,11 @@
 
   .presets{display:flex;flex-wrap:wrap;gap:8px}
   .preset{font-family:var(--mono);font-size:12px;color:var(--muted);cursor:pointer;
-    border:1px solid var(--line);background:rgba(255,255,255,.02);border-radius:999px;padding:7px 13px;transition:.2s}
-  .preset:hover{color:var(--ink);border-color:var(--cool);background:rgba(98,213,255,.08);transform:translateY(-1px)}
+    border:1px solid var(--line);background:#fffdf8;border-radius:999px;padding:7px 13px;transition:.2s}
+  .preset:hover{color:var(--ink);border-color:var(--cool);background:rgba(11,111,156,.08);transform:translateY(-1px)}
 
   .data{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border-radius:12px;overflow:hidden;border:1px solid var(--line)}
-  .cell{background:rgba(10,13,26,.85);padding:13px 14px}
+  .cell{background:#fffdf8;padding:13px 14px}
   .cell.full{grid-column:1/-1}
   .cell .k{font-family:var(--sans);font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:5px}
   .cell .k em{font-family:var(--mono);font-style:normal;color:var(--gold);font-size:11px}
@@ -133,7 +133,7 @@
   footer{max-width:1320px;margin:0 auto;padding:8px 28px 50px;font-family:var(--mono);font-size:11px;color:var(--faint);line-height:1.8}
   footer b{color:var(--muted)}
   .flash{animation:flash .6s ease}
-  @keyframes flash{0%{background:rgba(98,213,255,.18)}100%{background:rgba(10,13,26,.85)}}
+  @keyframes flash{0%{background:rgba(11,111,156,.16)}100%{background:#fffdf8}}
 </style>
 </head>
 <body>
@@ -426,9 +426,9 @@ function draw(time){
 
   // —— 背景：星雲底 ——
   const bg=ctx.createRadialGradient(cx,cy*0.7,0,cx,cy,W*0.75);
-  bg.addColorStop(0,"rgba(22,28,54,0.55)");
-  bg.addColorStop(.5,"rgba(8,10,22,0.6)");
-  bg.addColorStop(1,"rgba(3,4,9,0.9)");
+  bg.addColorStop(0,"rgba(255,253,248,0.9)");
+  bg.addColorStop(.5,"rgba(246,241,230,0.8)");
+  bg.addColorStop(1,"rgba(236,229,214,0.9)");
   ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
 
   // —— 星場（黑洞時做透鏡偏折）——
@@ -440,7 +440,7 @@ function draw(time){
     // 緩慢漂移
     px += Math.sin(time*0.05 + s.tw)*3;
     py += Math.cos(time*0.04 + s.tw)*3;
-    const tw=0.55+0.45*Math.sin(time*s.ts + s.tw);
+    const tw=0.35+0.3*Math.sin(time*s.ts + s.tw);
     let drawR=s.r, alpha=tw;
 
     if(lens>0.01 && thetaE>1){
@@ -458,9 +458,9 @@ function draw(time){
       alpha=Math.min(1,alpha+near*0.9*lens);
       drawR=s.r*(1+near*1.4*lens);
     }
-    if(s.hue===205){ctx.fillStyle=`rgba(150,190,255,${alpha})`;}
-    else if(s.hue===35){ctx.fillStyle=`rgba(255,210,150,${alpha})`;}
-    else ctx.fillStyle=`rgba(235,240,255,${alpha})`;
+    if(s.hue===205){ctx.fillStyle=`rgba(47,100,170,${alpha})`;}
+    else if(s.hue===35){ctx.fillStyle=`rgba(180,100,20,${alpha})`;}
+    else ctx.fillStyle=`rgba(70,85,110,${alpha})`;
     ctx.beginPath(); ctx.arc(px,py,drawR,0,PI*2); ctx.fill();
   }
 
@@ -476,14 +476,14 @@ function draw(time){
     const t=warmGlow;                          // 接近黑洞時降溫變暗
     const hot=1-smoothstep(0.0,0.5,t);
     const halo=ctx.createRadialGradient(cx,cy,starR*0.2,cx,cy,starR*2.4);
-    halo.addColorStop(0,`rgba(255,${200-60*(1-hot)},${150*hot},${0.35*hot+0.05})`);
+    halo.addColorStop(0,`rgba(255,${180-60*(1-hot)},${100*hot},${0.4*hot+0.05})`);
     halo.addColorStop(.4,`rgba(255,160,80,${0.18*hot})`);
     halo.addColorStop(1,"rgba(255,140,60,0)");
     ctx.fillStyle=halo; ctx.beginPath(); ctx.arc(cx,cy,starR*2.4,0,PI*2); ctx.fill();
 
     const body=ctx.createRadialGradient(cx-starR*0.3,cy-starR*0.3,starR*0.1,cx,cy,starR);
-    const baseC = mix([255,238,210],[255,120,40], 1-hot);   // 越緻密越偏紅
-    const edgeC = mix([255,150,70],[120,30,20], 1-hot);
+    const baseC = mix([255,214,140],[240,110,30], 1-hot);   // 越緻密越偏紅
+    const edgeC = mix([240,130,50],[150,40,20], 1-hot);
     body.addColorStop(0,`rgb(${baseC})`);
     body.addColorStop(.7,`rgb(${edgeC})`);
     body.addColorStop(1,`rgba(${edgeC.join(",")},0.85)`);
@@ -500,16 +500,16 @@ function draw(time){
     const a=(1-warmGlow)*0.9;
     ctx.save();
     ctx.setLineDash([5,6]); ctx.lineWidth=1.4;
-    ctx.strokeStyle=`rgba(255,120,90,${a})`;
+    ctx.strokeStyle=`rgba(194,65,45,${a})`;
     ctx.beginPath(); ctx.arc(cx,cy,Math.max(horR,2.5),0,PI*2); ctx.stroke();
     ctx.setLineDash([]);
     if(horR>14){
-      ctx.fillStyle=`rgba(255,150,120,${a})`;
+      ctx.fillStyle=`rgba(170,60,40,${a})`;
       ctx.font="11px 'IBM Plex Mono'";
       ctx.fillText("r_s", cx+horR*0.7+4, cy-horR*0.7-4);
     } else {
       // 太小：用箭頭標記
-      ctx.fillStyle=`rgba(255,150,120,${a})`;
+      ctx.fillStyle=`rgba(170,60,40,${a})`;
       ctx.font="10px 'IBM Plex Mono'";
       ctx.fillText("r_s ↗", cx+8, cy-6);
     }
@@ -522,21 +522,21 @@ function draw(time){
     // 光子環（陰影邊緣強亮）
     ctx.save();
     const ring=ctx.createRadialGradient(cx,cy,shadowR*0.96,cx,cy,shadowR*1.06);
-    ring.addColorStop(0,"rgba(255,200,120,0)");
-    ring.addColorStop(.5,`rgba(255,225,170,${0.95*diskA})`);
-    ring.addColorStop(1,"rgba(255,200,120,0)");
+    ring.addColorStop(0,"rgba(220,140,40,0)");
+    ring.addColorStop(.5,`rgba(225,150,40,${0.9*diskA})`);
+    ring.addColorStop(1,"rgba(220,140,40,0)");
     ctx.strokeStyle=ring; ctx.lineWidth=shadowR*0.10+2;
     ctx.beginPath(); ctx.arc(cx,cy,shadowR,0,PI*2); ctx.stroke();
     ctx.restore();
 
     // 科學標註：光子球、ISCO、陰影
-    annotate(cx,cy,photonR,"1.5 r_s 光子球","rgba(120,200,255,",0.5*diskA);
-    annotate(cx,cy,iscoR ,"3 r_s ISCO","rgba(160,255,210,",0.45*diskA);
+    annotate(cx,cy,photonR,"1.5 r_s 光子球","rgba(11,111,156,",0.5*diskA);
+    annotate(cx,cy,iscoR ,"3 r_s ISCO","rgba(31,138,91,",0.45*diskA);
 
     // 內部：天體本身半徑（已 ≤ r_s）
     if(starR>4){
       ctx.save(); ctx.setLineDash([3,4]); ctx.lineWidth=1;
-      ctx.strokeStyle=`rgba(180,190,220,${0.6*diskA})`;
+      ctx.strokeStyle=`rgba(86,97,112,${0.7*diskA})`;
       ctx.beginPath(); ctx.arc(cx,cy,starR,0,PI*2); ctx.stroke();
       ctx.restore();
     }
@@ -587,22 +587,20 @@ function drawAccretion(cx,cy,horR,time,alpha,layer){
       const px=x*rr, py=y*rr - r*0.0;
       const tnorm=(r-inner)/(outer-inner);
       const heat=1-tnorm;
-      const col=mix([255,245,210],[255,90,30],tnorm);
-      const a=alpha*beam*(0.5+0.5*heat)*(0.5+0.5*Math.random()*0+0.5);
-      ctx.fillStyle=`rgba(${col[0]|0},${col[1]|0},${col[2]|0},${a*0.5})`;
+      const col=mix([230,150,30],[190,50,20],tnorm);
+      const a=alpha*beam*(0.5+0.5*heat);
+      ctx.fillStyle=`rgba(${col[0]|0},${col[1]|0},${col[2]|0},${a*0.8})`;
       const sz=1.4+heat*1.6;
       ctx.beginPath(); ctx.arc(px,py,sz,0,PI*2); ctx.fill();
     }
   }
   // 被重力彎折翻到頂部的「光弧」（front 時疊一道亮弧）
   if(layer==="front"){
-    ctx.globalCompositeOperation="lighter";
     const arc=ctx.createLinearGradient(0,-outer,0,-inner);
-    arc.addColorStop(0,`rgba(255,200,140,0)`);
-    arc.addColorStop(1,`rgba(255,160,90,${0.5*alpha})`);
+    arc.addColorStop(0,`rgba(220,130,40,0)`);
+    arc.addColorStop(1,`rgba(210,110,30,${0.45*alpha})`);
     ctx.strokeStyle=arc; ctx.lineWidth=horR*0.5;
     ctx.beginPath(); ctx.arc(0,0,horR*1.7,PI*1.12,PI*1.88); ctx.stroke();
-    ctx.globalCompositeOperation="source-over";
   }
   ctx.restore();
 }
