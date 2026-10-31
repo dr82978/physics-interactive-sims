@@ -6,13 +6,13 @@
 <title>趨膚效應模擬器 · Skin-Effect Simulator</title>
 <style>
   :root{
-    --bg:#06080c; --panel:#0c1118; --panel2:#0f1620; --line:#1b2632;
-    --ink:#e7edf3; --dim:#7c8da0; --faint:#46566a;
-    --cyan:#22d3ee;      /* 入射波 / 介質A */
-    --violet:#c084fc;    /* 透射波 / 介質B */
-    --amber:#fbbf24;     /* 1/e 標注 */
-    --red:#fb7185;       /* 反射 */
-    --grid:rgba(40,72,96,.28);
+    --bg:#f5f1e8; --panel:#fffdf8; --panel2:#f6f2e8; --line:#ddd5c4;
+    --ink:#26303b; --dim:#566170; --faint:#7d8794;
+    --cyan:#0b7a8c;      /* 入射波 / 介質A */
+    --violet:#7b3fc4;    /* 透射波 / 介質B */
+    --amber:#b86e00;     /* 1/e 標注 */
+    --red:#c2412d;       /* 反射 */
+    --grid:rgba(60,80,110,.14);
     --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
   }
   *{box-sizing:border-box}
@@ -22,9 +22,9 @@
   header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:10px}
   header h1{font-size:15px;letter-spacing:.18em;text-transform:uppercase;margin:0;font-weight:600}
   header .sub{font-size:11px;color:var(--dim);letter-spacing:.05em}
-  header .dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);display:inline-block}
+  header .dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px rgba(11,122,140,.5);display:inline-block}
 
-  .scope{position:relative;background:linear-gradient(180deg,#080c12,#0a0f16);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .scope{position:relative;background:linear-gradient(180deg,#fffdf8,#f6f2e8);border:1px solid var(--line);border-radius:10px;overflow:hidden}
   canvas{display:block;width:100%}
   #wave{height:340px}
   #meter{height:96px}
@@ -43,10 +43,10 @@
   .ctrl .val{font-size:11px;color:var(--amber);font-variant-numeric:tabular-nums}
   button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
   input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:3px;background:var(--line);border-radius:3px;outline:none}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--ink);border:2px solid var(--bg);cursor:pointer;box-shadow:0 0 7px rgba(231,237,243,.4)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--ink);border:2px solid var(--bg);cursor:pointer;box-shadow:0 1px 4px rgba(38,48,59,.35)}
   input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--ink);border:2px solid var(--bg);cursor:pointer}
-  input[type=range].a::-webkit-slider-thumb{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
-  input[type=range].b::-webkit-slider-thumb{background:var(--violet);box-shadow:0 0 8px var(--violet)}
+  input[type=range].a::-webkit-slider-thumb{background:var(--cyan);box-shadow:0 1px 4px rgba(11,122,140,.5)}
+  input[type=range].b::-webkit-slider-thumb{background:var(--violet);box-shadow:0 1px 4px rgba(123,63,196,.5)}
   input[type=range].a::-moz-range-thumb{background:var(--cyan)}
   input[type=range].b::-moz-range-thumb{background:var(--violet)}
 
@@ -301,31 +301,31 @@ function draw(){
   const pxPerM_B=(w-ix)/WB, pxPerM_A=ix/WA;
 
   /* 背景：兩介質色塊 */
-  ctx.fillStyle="rgba(34,211,238,.045)"; ctx.fillRect(0,0,ix,h);
-  ctx.fillStyle="rgba(192,132,252,.06)"; ctx.fillRect(ix,0,w-ix,h);
+  ctx.fillStyle="rgba(11,122,140,.06)"; ctx.fillRect(0,0,ix,h);
+  ctx.fillStyle="rgba(123,63,196,.07)"; ctx.fillRect(ix,0,w-ix,h);
 
   /* 格線 */
-  ctx.lineWidth=1; ctx.strokeStyle="rgba(40,72,96,.28)";
+  ctx.lineWidth=1; ctx.strokeStyle="rgba(60,80,110,.14)";
   for(let gy=0.1;gy<1;gy+=0.1){ctx.beginPath();ctx.moveTo(0,gy*h);ctx.lineTo(w,gy*h);ctx.stroke();}
-  ctx.strokeStyle="rgba(231,237,243,.12)";ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(w,mid);ctx.stroke();
+  ctx.strokeStyle="rgba(38,48,59,.22)";ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(w,mid);ctx.stroke();
 
   /* 包絡填色（介質B透射衰減） */
   const nrm=($("norm").checked && tMag>1e-300)? 1/tMag : 1;     // 僅作顯示放大，物理量讀數不受影響
   const env=z=> tMag*nrm*Math.exp(-B.beta*z);
-  ctx.fillStyle="rgba(192,132,252,.10)";
+  ctx.fillStyle="rgba(123,63,196,.12)";
   ctx.beginPath();
   let started=false;
   for(let x=ix;x<=w;x+=2){const z=(x-ix)/pxPerM_B;const e=env(z)*amp; if(!started){ctx.moveTo(x,mid-e);started=true;}else ctx.lineTo(x,mid-e);}
   for(let x=w;x>=ix;x-=2){const z=(x-ix)/pxPerM_B;const e=env(z)*amp;ctx.lineTo(x,mid+e);}
   ctx.closePath();ctx.fill();
   // 包絡線
-  ctx.strokeStyle="rgba(192,132,252,.45)";ctx.lineWidth=1;
+  ctx.strokeStyle="rgba(123,63,196,.6)";ctx.lineWidth=1;
   for(const s of [-1,1]){ctx.beginPath();let st=false;
     for(let x=ix;x<=w;x+=2){const z=(x-ix)/pxPerM_B;const y=mid+s*env(z)*amp;st?ctx.lineTo(x,y):(ctx.moveTo(x,y),st=true);}ctx.stroke();}
 
   /* 波形 A（入射+反射） */
   const cphase=[Math.cos(psi),-Math.sin(psi)];   // e^{-iψ}
-  ctx.lineWidth=2; ctx.strokeStyle="#22d3ee";
+  ctx.lineWidth=2; ctx.strokeStyle="#0b7a8c";
   ctx.beginPath();let st=false;
   for(let x=0;x<=ix;x+=1.5){
     const z=(x-ix)/pxPerM_A;                       // z<0
@@ -335,7 +335,7 @@ function draw(){
   }ctx.stroke();
 
   /* 波形 B（透射衰減） */
-  ctx.strokeStyle="#c084fc"; ctx.shadowColor="#c084fc"; ctx.shadowBlur=6;
+  ctx.strokeStyle="#7b3fc4"; ctx.shadowColor="#7b3fc4"; ctx.shadowBlur=6;
   ctx.beginPath();st=false;
   for(let x=ix;x<=w;x+=1.5){
     const z=(x-ix)/pxPerM_B;
@@ -344,7 +344,7 @@ function draw(){
   }ctx.stroke();ctx.shadowBlur=0;
 
   /* 介面線 */
-  ctx.strokeStyle="rgba(231,237,243,.6)";ctx.lineWidth=1.5;
+  ctx.strokeStyle="rgba(38,48,59,.65)";ctx.lineWidth=1.5;
   ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(ix,0);ctx.lineTo(ix,h);ctx.stroke();ctx.setLineDash([]);
 
   /* δ（1/e）標注 */
@@ -356,24 +356,24 @@ function draw(){
     return x;
   }
   function offmark(label,sub){
-    ctx.fillStyle="#fbbf24";ctx.textAlign="right";
+    ctx.fillStyle="#b86e00";ctx.textAlign="right";
     ctx.fillText("δ → 視窗外",w-10,36);
-    ctx.fillStyle="#7c8da0";ctx.fillText(sub,w-10,52);ctx.textAlign="left";return null;
+    ctx.fillStyle="#566170";ctx.fillText(sub,w-10,52);ctx.textAlign="left";return null;
   }
   if(isFinite(B.delta)){
     // 2δ,3δ 輔助
-    [[2,"rgba(251,191,36,.25)"],[3,"rgba(251,191,36,.18)"]].forEach(([n,col])=>{
+    [[2,"rgba(184,110,0,.25)"],[3,"rgba(184,110,0,.18)"]].forEach(([n,col])=>{
       const x=ix+n*B.delta*pxPerM_B; if(x<w){ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash([2,4]);
         ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();ctx.setLineDash([]);
-        ctx.fillStyle="rgba(251,191,36,.4)";ctx.textAlign="center";ctx.fillText(n+"δ",x,h-8);ctx.textAlign="left";}
+        ctx.fillStyle="rgba(184,110,0,.4)";ctx.textAlign="center";ctx.fillText(n+"δ",x,h-8);ctx.textAlign="left";}
     });
-    const xd=vline(B.delta,"#fbbf24",[5,3]);
+    const xd=vline(B.delta,"#b86e00",[5,3]);
     // 1/e 水平準位
     const lvl=tMag*nrm*Math.exp(-1)*amp;
-    ctx.strokeStyle="rgba(251,191,36,.35)";ctx.setLineDash([2,3]);
+    ctx.strokeStyle="rgba(184,110,0,.35)";ctx.setLineDash([2,3]);
     ctx.beginPath();ctx.moveTo(ix,mid-lvl);ctx.lineTo(Math.min(xd||w,w),mid-lvl);ctx.stroke();ctx.setLineDash([]);
     if(xd!==null){
-      ctx.fillStyle="#fbbf24";ctx.textAlign="center";
+      ctx.fillStyle="#b86e00";ctx.textAlign="center";
       ctx.fillText("δ = "+fmtLen(B.delta), xd, 36);
       ctx.font="10px ui-monospace,monospace";
       ctx.fillText("振幅 ↓ 1/e ≈ 0.368", xd, 52);
@@ -384,12 +384,12 @@ function draw(){
   }
 
   /* 介質標籤 */
-  ctx.fillStyle="#22d3ee";ctx.font="10px ui-monospace,monospace";ctx.fillText("介質 A",10,16);
-  ctx.fillStyle="#c084fc";ctx.fillText("介質 B（透射）"+(nrm!==1?"　顯示放大 ×"+sci(nrm)+"（實際 |t|="+tMag.toFixed(4)+"）":""),ix+8,16);
+  ctx.fillStyle="#0b7a8c";ctx.font="10px ui-monospace,monospace";ctx.fillText("介質 A",10,16);
+  ctx.fillStyle="#7b3fc4";ctx.fillText("介質 B（透射）"+(nrm!==1?"　顯示放大 ×"+sci(nrm)+"（實際 |t|="+tMag.toFixed(4)+"）":""),ix+8,16);
   // 深度標尺
-  ctx.fillStyle="#46566a";ctx.textAlign="right";
+  ctx.fillStyle="#7d8794";ctx.textAlign="right";
   ctx.fillText("深度 z →  視窗 "+fmtLen(WB),w-8,h-8);ctx.textAlign="left";
-  ctx.fillStyle="#46566a";ctx.fillText("← A 視窗 "+fmtLen(WA)+"（2.2 λ）",10,h-8);
+  ctx.fillStyle="#7d8794";ctx.fillText("← A 視窗 "+fmtLen(WA)+"（2.2 λ）",10,h-8);
 }
 
 /* ---------- 對數穿透深度尺 ---------- */
@@ -400,18 +400,18 @@ function drawMeter(){
   const pad=46, x0=pad, x1=w-pad, ymid=h*0.62;
   const X=L=>x0+(L-lo)/(hi-lo)*(x1-x0);
 
-  ctx.fillStyle="#7c8da0";ctx.font="10px ui-monospace,monospace";ctx.textAlign="left";
+  ctx.fillStyle="#566170";ctx.font="10px ui-monospace,monospace";ctx.textAlign="left";
   ctx.fillText("穿透深度 δ", 10, 16);
 
   // 軌道
-  ctx.strokeStyle="#1b2632";ctx.lineWidth=3;ctx.lineCap="round";
+  ctx.strokeStyle="#d9d0bd";ctx.lineWidth=3;ctx.lineCap="round";
   ctx.beginPath();ctx.moveTo(x0,ymid);ctx.lineTo(x1,ymid);ctx.stroke();
 
   const ticks=[[-9,"nm"],[-6,"µm"],[-3,"mm"],[-2,"cm"],[0,"m"],[3,"km"]];
   ctx.font="9.5px ui-monospace,monospace";
   ticks.forEach(([L,lab])=>{const x=X(L);
-    ctx.strokeStyle="#2a3a4a";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,ymid-7);ctx.lineTo(x,ymid+7);ctx.stroke();
-    ctx.fillStyle="#46566a";ctx.textAlign="center";ctx.fillText(lab,x,ymid+22);});
+    ctx.strokeStyle="#b9ae98";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,ymid-7);ctx.lineTo(x,ymid+7);ctx.stroke();
+    ctx.fillStyle="#7d8794";ctx.textAlign="center";ctx.fillText(lab,x,ymid+22);});
 
   const d=P.B.delta;
   ctx.textAlign="center";
@@ -419,17 +419,17 @@ function drawMeter(){
     let L=Math.log10(d); L=Math.max(lo,Math.min(hi,L));
     const x=X(L);
     // 已填軌
-    ctx.strokeStyle="#fbbf24";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x0,ymid);ctx.lineTo(x,ymid);ctx.stroke();
+    ctx.strokeStyle="#b86e00";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x0,ymid);ctx.lineTo(x,ymid);ctx.stroke();
     // 標記
-    ctx.fillStyle="#fbbf24";ctx.shadowColor="#fbbf24";ctx.shadowBlur=12;
+    ctx.fillStyle="#b86e00";ctx.shadowColor="#b86e00";ctx.shadowBlur=12;
     ctx.beginPath();ctx.arc(x,ymid,7,0,TAU);ctx.fill();ctx.shadowBlur=0;
-    ctx.fillStyle="#06080c";ctx.beginPath();ctx.arc(x,ymid,2.5,0,TAU);ctx.fill();
-    ctx.fillStyle="#fbbf24";ctx.font="12px ui-monospace,monospace";
+    ctx.fillStyle="#fffdf8";ctx.beginPath();ctx.arc(x,ymid,2.5,0,TAU);ctx.fill();
+    ctx.fillStyle="#b86e00";ctx.font="12px ui-monospace,monospace";
     ctx.fillText("δ = "+fmtLen(d), x, ymid-16);
   }else{
     const x=x1;
-    ctx.strokeStyle="#fbbf24";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x0,ymid);ctx.lineTo(x,ymid);ctx.stroke();
-    ctx.fillStyle="#fbbf24";ctx.font="12px ui-monospace,monospace";ctx.fillText("δ → ∞（近乎無衰減）",(x0+x1)/2,ymid-16);
+    ctx.strokeStyle="#b86e00";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x0,ymid);ctx.lineTo(x,ymid);ctx.stroke();
+    ctx.fillStyle="#b86e00";ctx.font="12px ui-monospace,monospace";ctx.fillText("δ → ∞（近乎無衰減）",(x0+x1)/2,ymid-16);
   }
 }
 

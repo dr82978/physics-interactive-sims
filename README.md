@@ -17,3 +17,6 @@
 | [dewpoint_psychrometric](sims/dewpoint_psychrometric.html) | 熱力學 | [docs](docs/dewpoint_psychrometric.md) |
 
 檔名與先前版本的對應：`elastic_collision_2d_v7` → `elastic_collision_2d`；`溫濕度、露點模擬v2` → `dewpoint_psychrometric`（v1 為舊版，未收錄）。
+
+## 配色
+全部頁面採用暖米白底、深墨色文字的淺色配色（避免長時間觀看黑底的不適）；線條使用較深的飽和色以維持對比。corona 的電暈區以藍紫色標示，與暖色熱圖區分。

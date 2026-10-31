@@ -6,9 +6,9 @@
 <title>3D 靜電場觀測儀 · Electrostatic Field Viewer</title>
 <style>
   :root{
-    --bg:#070a14; --panel:rgba(14,19,33,.82); --panel-edge:#1d2741;
-    --ink:#dfe6f5; --ink-dim:#8a97b8; --ink-faint:#5a6a92; --accent:#5fd0ff;
-    --accent2:#ffd166; --rule:#222d49; --mono:"SFMono-Regular",ui-monospace,"Cascadia Code",Menlo,Consolas,monospace;
+    --bg:#f5f1e8; --panel:rgba(255,253,248,.9); --panel-edge:#ddd5c4;
+    --ink:#26303b; --ink-dim:#566170; --ink-faint:#7d8794; --accent:#0b6f9c;
+    --accent2:#a86b00; --rule:#ddd5c4; --mono:"SFMono-Regular",ui-monospace,"Cascadia Code",Menlo,Consolas,monospace;
     --sans:"Inter",system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
   }
   *{box-sizing:border-box}
@@ -22,7 +22,7 @@
     backdrop-filter:blur(14px);border-right:1px solid var(--panel-edge);
     padding:18px 18px 24px;overflow-y:auto;z-index:10;transition:transform .28s ease}
   #panel::-webkit-scrollbar{width:8px}
-  #panel::-webkit-scrollbar-thumb{background:#1f2a47;border-radius:8px}
+  #panel::-webkit-scrollbar-thumb{background:#cfc6b2;border-radius:8px}
 
   .brand{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
   .brand h1{font-size:15px;font-weight:650;letter-spacing:.2px;margin:0}
@@ -35,63 +35,63 @@
   .glabel::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--rule),transparent)}
 
   .shape-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .chip{appearance:none;border:1px solid var(--panel-edge);background:#0d1424;color:var(--ink-dim);
+  .chip{appearance:none;border:1px solid var(--panel-edge);background:#f6f2e8;color:var(--ink-dim);
     border-radius:9px;padding:9px 8px;font-size:11.5px;font-family:var(--sans);cursor:pointer;
     text-align:left;line-height:1.25;transition:.14s;display:flex;flex-direction:column;gap:2px}
   .chip .k{font-family:var(--mono);font-size:9px;color:var(--ink-faint);letter-spacing:.5px}
-  .chip:hover{border-color:#33507e;color:var(--ink)}
-  .chip.on{border-color:var(--accent);background:rgba(95,208,255,.12);color:#eaf6ff;
-    box-shadow:0 0 0 1px rgba(95,208,255,.25) inset}
+  .chip:hover{border-color:#0b6f9c;color:var(--ink)}
+  .chip.on{border-color:var(--accent);background:rgba(11,111,156,.10);color:#0b4f70;
+    box-shadow:0 0 0 1px rgba(11,111,156,.3) inset}
 
   .seg{display:flex;border:1px solid var(--panel-edge);border-radius:9px;overflow:hidden}
-  .seg button{flex:1;appearance:none;border:0;background:#0d1424;color:var(--ink-dim);
+  .seg button{flex:1;appearance:none;border:0;background:#f6f2e8;color:var(--ink-dim);
     padding:9px 6px;font-size:12px;cursor:pointer;font-family:var(--sans);transition:.14s}
   .seg button+button{border-left:1px solid var(--panel-edge)}
-  .seg button.on{background:rgba(95,208,255,.14);color:#eaf6ff}
+  .seg button.on{background:rgba(11,111,156,.12);color:#0b4f70}
 
   .rowlabel{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-dim);margin-bottom:6px}
   .rowlabel b{font-family:var(--mono);color:var(--accent2);font-weight:500}
   input[type=range]{width:100%;-webkit-appearance:none;height:4px;border-radius:4px;
-    background:#1c2640;outline:none;margin:2px 0}
+    background:#d9d0bd;outline:none;margin:2px 0}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;
-    background:var(--accent);cursor:pointer;border:2px solid #0a1020;box-shadow:0 0 6px rgba(95,208,255,.6)}
+    background:var(--accent);cursor:pointer;border:2px solid #fffdf8;box-shadow:0 0 6px rgba(11,111,156,.35)}
   input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--accent);
-    border:2px solid #0a1020;cursor:pointer}
+    border:2px solid #fffdf8;cursor:pointer}
 
   /* 色標 legend */
   .legend{margin-top:4px}
   .bar{height:11px;border-radius:6px;border:1px solid var(--panel-edge);
-    background:linear-gradient(90deg,hsl(240 90% 50%),hsl(180 90% 48%),hsl(120 80% 45%),hsl(60 90% 50%),hsl(0 90% 52%))}
+    background:linear-gradient(90deg,hsl(240 90% 42%),hsl(180 90% 38%),hsl(120 80% 36%),hsl(45 90% 42%),hsl(0 85% 46%))}
   .barticks{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;
     color:var(--ink-dim);margin-top:3px}
 
-  .note{font-size:10.5px;line-height:1.55;color:var(--ink-dim);background:#0b1120;
+  .note{font-size:10.5px;line-height:1.55;color:var(--ink-dim);background:#fffdf8;
     border:1px solid var(--panel-edge);border-radius:9px;padding:10px 11px}
   .note b{color:var(--ink)}
   .note .ref{font-family:var(--mono);color:var(--accent2)}
 
-  .miniact{width:100%;appearance:none;border:1px solid var(--panel-edge);background:#0d1424;
+  .miniact{width:100%;appearance:none;border:1px solid var(--panel-edge);background:#f6f2e8;
     color:var(--ink-dim);border-radius:9px;padding:9px;font-size:11.5px;cursor:pointer;transition:.14s}
-  .miniact:hover{border-color:#33507e;color:var(--ink)}
+  .miniact:hover{border-color:#0b6f9c;color:var(--ink)}
 
   .hidden{display:none !important}
 
   /* 計算中遮罩 */
   #busy{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-    flex-direction:column;gap:14px;background:rgba(5,8,16,.55);backdrop-filter:blur(2px);z-index:20;
+    flex-direction:column;gap:14px;background:rgba(245,241,232,.75);backdrop-filter:blur(2px);z-index:20;
     opacity:0;pointer-events:none;transition:opacity .2s}
   #busy.show{opacity:1}
-  .spinner{width:42px;height:42px;border-radius:50%;border:3px solid #1c2640;
+  .spinner{width:42px;height:42px;border-radius:50%;border:3px solid #d9d0bd;
     border-top-color:var(--accent);animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   #busytxt{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:1px}
-  .progwrap{width:200px;height:4px;background:#1c2640;border-radius:4px;overflow:hidden}
+  .progwrap{width:200px;height:4px;background:#d9d0bd;border-radius:4px;overflow:hidden}
   .progbar{height:100%;width:0;background:var(--accent);transition:width .12s}
 
   /* 右下角讀數 */
   #hud{position:fixed;right:14px;bottom:14px;z-index:9;font-family:var(--mono);font-size:10.5px;
     color:var(--ink-dim);text-align:right;line-height:1.7;pointer-events:none;
-    text-shadow:0 1px 4px #000}
+    text-shadow:0 1px 3px rgba(255,255,255,.9)}
   #hud b{color:var(--ink)}
   button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
@@ -101,7 +101,7 @@
     border-radius:9px;padding:9px 12px;font-size:13px;cursor:pointer;backdrop-filter:blur(10px)}
   @media (max-width:760px){
     #panel{transform:translateX(-100%);width:86%;max-width:340px}
-    #panel.open{transform:none;box-shadow:0 0 40px rgba(0,0,0,.6)}
+    #panel.open{transform:none;box-shadow:0 0 30px rgba(38,48,59,.25)}
     #toggle{display:block}
     #hud{bottom:auto;top:12px;right:12px}
   }
@@ -376,7 +376,7 @@ function trace(px,py,pz,sign){
 const _col=new THREE.Color();
 function magColor(m){
   let t=m/(3*E0); if(t<0)t=0; if(t>1)t=1;
-  _col.setHSL((1-t)*0.666, 0.92, 0.52); return _col;
+  _col.setHSL((1-t)*0.666, 0.9, 0.42); return _col;
 }
 
 // =====================  THREE.js  =====================
@@ -387,8 +387,8 @@ renderer.setSize(innerWidth,innerHeight);
 stage.appendChild(renderer.domElement);
 
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x070a14);
-scene.fog=new THREE.FogExp2(0x070a14,0.085);
+scene.background=new THREE.Color(0xf5f1e8);
+scene.fog=new THREE.FogExp2(0xf5f1e8,0.085);
 
 const camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,0.05,100);
 camera.up.set(0,0,1);
@@ -400,7 +400,7 @@ const dl2=new THREE.DirectionalLight(0x88aaff,0.3); dl2.position.set(-4,-2,-3); 
 // 域邊界框
 const boxEdges=new THREE.LineSegments(
   new THREE.EdgesGeometry(new THREE.BoxGeometry(2*L,2*L,2*L)),
-  new THREE.LineBasicMaterial({color:0x24314f}));
+  new THREE.LineBasicMaterial({color:0xa89f8c}));
 scene.add(boxEdges);
 
 // 外場方向指示（頂部數支向下小箭頭）
@@ -410,7 +410,7 @@ const fieldHint=new THREE.Group(); scene.add(fieldHint);
   for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){
     if(a===0&&b===0) continue;
     const ah=new THREE.ArrowHelper(down, new THREE.Vector3(a*0.7,b*0.7,1.25),
-      0.42, 0x46608f, 0.10, 0.05);
+      0.42, 0x7a8bab, 0.10, 0.05);
     fieldHint.add(ah);
   }
 })();
@@ -423,9 +423,9 @@ const objGroup=new THREE.Group(); scene.add(objGroup);
 function buildObject(){
   while(objGroup.children.length) objGroup.remove(objGroup.children[0]);
   const cond=STATE.material==='conductor';
-  const fillCol = cond?0xb4c2da:0x6f9bff;
-  const wireCol = cond?0xe2ecff:0xb6d2ff;
-  const fillOpa = cond?0.36:0.22;
+  const fillCol = cond?0x8fa3c0:0x4f7be0;
+  const wireCol = cond?0x41587a:0x2f5fb8;
+  const fillOpa = cond?0.30:0.20;
   const fill=()=> new THREE.MeshStandardMaterial({color:fillCol,
       metalness:cond?0.5:0.0, roughness:cond?0.35:0.5,
       emissive:fillCol, emissiveIntensity:cond?0.05:0.10,

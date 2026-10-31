@@ -6,11 +6,11 @@
 <title>運動電荷的場 — 相對論性場視鏡</title>
 <style>
   :root{
-    --bg:#0a0d14; --panel:#10141f; --panel2:#161c2b; --line:#1e2638;
-    --ink:#e9eef7; --muted:#8a96ad; --faint:#5b6786;
-    --e:#33d6e6;        /* 電場 cyan */
-    --b:#ffb13d;        /* 磁場 amber */
-    --rad:#bf7dff;      /* 輻射 violet */
+    --bg:#f5f1e8; --panel:#fffdf8; --panel2:#f1ece0; --line:#ddd5c4;
+    --ink:#26303b; --muted:#566170; --faint:#7d8794;
+    --e:#0b7a8c;        /* 電場 cyan */
+    --b:#c26d00;        /* 磁場 amber */
+    --rad:#7b3fc4;      /* 輻射 violet */
     --charge:#ffffff;
     --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
     --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,"PingFang TC","Noto Sans TC",sans-serif;
@@ -25,7 +25,7 @@
   .sub{color:var(--muted);font-size:14px;max-width:62ch}
   .stage{display:grid;grid-template-columns:minmax(0,max(320px,calc(100vh - 200px))) 320px;justify-content:center;gap:18px;align-items:start}
   @media(max-width:820px){.stage{grid-template-columns:1fr}}
-  .canvas-wrap{position:relative;background:radial-gradient(120% 120% at 50% 45%,#0e1320 0%,#080b11 100%);
+  .canvas-wrap{position:relative;background:radial-gradient(120% 120% at 50% 45%,#fffdf8 0%,#f1ece0 100%);
     border:1px solid var(--line);border-radius:14px;overflow:hidden;aspect-ratio:1/1}
   canvas{position:absolute;inset:0;display:block;width:100%;height:100%}
   .badge{position:absolute;left:12px;top:11px;font-family:var(--mono);font-size:11px;color:var(--faint);
@@ -38,7 +38,7 @@
   .lab .unit{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
   input[type=number]{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);
     font-family:var(--mono);font-size:14px;padding:9px 10px;border-radius:8px;outline:none}
-  input[type=number]:focus{border-color:var(--e);box-shadow:0 0 0 2px rgba(51,214,230,.18)}
+  input[type=number]:focus{border-color:var(--e);box-shadow:0 0 0 3px rgba(11,122,140,.16)}
   input[type=range]{width:100%;margin:11px 0 2px;-webkit-appearance:none;appearance:none;height:4px;
     border-radius:4px;background:var(--line);outline:none}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;
@@ -181,7 +181,7 @@ function draw(){
   ctx.clearRect(0,0,w,h);
 
   // motion axis
-  ctx.strokeStyle='#1c2536'; ctx.lineWidth=1; ctx.setLineDash([4,5]);
+  ctx.strokeStyle='#cfc6b2'; ctx.lineWidth=1; ctx.setLineDash([4,5]);
   ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(w,cy); ctx.stroke(); ctx.setLineDash([]);
 
   /* ---- B field markers (⊙ out / ⊗ into), size & alpha ∝ |B| ---- */
@@ -198,7 +198,7 @@ function draw(){
     ctx.font='13px '+getComputedStyle(document.body).getPropertyValue('--mono');
     ctx.textAlign='center'; ctx.textBaseline='middle';
     for(const p of pts){ const t=Math.pow(p.B/bmax,0.5); if(t<0.12)continue;
-      const sz=4+t*5; ctx.globalAlpha=0.25+0.6*t; ctx.strokeStyle='#ffb13d'; ctx.fillStyle='#ffb13d';
+      const sz=4+t*5; ctx.globalAlpha=0.25+0.6*t; ctx.strokeStyle='#c26d00'; ctx.fillStyle='#c26d00';
       ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(p.px,p.py,sz,0,2*Math.PI); ctx.stroke();
       if(p.up){ ctx.beginPath(); ctx.arc(p.px,p.py,sz*0.32,0,2*Math.PI); ctx.fill(); }      // ⊙ dot
       else { ctx.lineWidth=1.2; const d=sz*0.62;                                            // ⊗ cross
@@ -217,28 +217,28 @@ function draw(){
       tips.push([cx+rr*Math.cos(phi), cy-rr*Math.sin(phi)]); }
     ctx.beginPath(); ctx.moveTo(tips[0][0],tips[0][1]);
     for(let i=1;i<tips.length;i++) ctx.lineTo(tips[i][0],tips[i][1]); ctx.closePath();
-    ctx.fillStyle='rgba(191,125,255,0.13)'; ctx.fill();
-    ctx.strokeStyle='rgba(191,125,255,0.55)'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='rgba(123,63,196,0.12)'; ctx.fill();
+    ctx.strokeStyle='rgba(123,63,196,0.75)'; ctx.lineWidth=1.5; ctx.stroke();
     const pk=peakRadAngle(beta), rr=R0; // two symmetric peaks (±θ)
-    for(const sgn of [1,-1]) arrow(cx,cy, cx+rr*Math.cos(pk), cy-sgn*rr*Math.sin(pk), '#bf7dff', 2.4, 9);
+    for(const sgn of [1,-1]) arrow(cx,cy, cx+rr*Math.cos(pk), cy-sgn*rr*Math.sin(pk), '#7b3fc4', 2.4, 9);
   }
 
   /* ---- E field lines (density ∝ |E|) ---- */
   const angles=fieldLineAngles(beta, 24), r0=R*0.12;
   for(const phi of angles){
     const dx=Math.cos(phi), dy=Math.sin(phi);
-    arrow(cx+r0*dx, cy-r0*dy, cx+lineLen*dx, cy-lineLen*dy, 'rgba(51,214,230,0.85)', 1.4, 7);
+    arrow(cx+r0*dx, cy-r0*dy, cx+lineLen*dx, cy-lineLen*dy, 'rgba(11,122,140,0.85)', 1.4, 7);
   }
 
   /* ---- the charge ---- */
   const g=ctx.createRadialGradient(cx,cy,0,cx,cy,16);
-  g.addColorStop(0,'rgba(255,255,255,0.9)'); g.addColorStop(1,'rgba(255,255,255,0)');
+  g.addColorStop(0,'rgba(38,48,59,0.35)'); g.addColorStop(1,'rgba(38,48,59,0)');
   ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,16,0,2*Math.PI); ctx.fill();
-  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(cx,cy,5.5,0,2*Math.PI); ctx.fill();
-  ctx.fillStyle='#0a0d14'; ctx.font='bold 9px '+getComputedStyle(document.body).getPropertyValue('--mono');
+  ctx.fillStyle='#26303b'; ctx.beginPath(); ctx.arc(cx,cy,5.5,0,2*Math.PI); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 9px '+getComputedStyle(document.body).getPropertyValue('--mono');
   ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('+',cx,cy+0.5);
   // velocity indicator
-  if(beta>1e-6) arrow(cx,cy, cx+R*0.20+R*0.20*beta, cy, 'rgba(255,255,255,0.55)', 2, 7);
+  if(beta>1e-6) arrow(cx,cy, cx+R*0.20+R*0.20*beta, cy, 'rgba(38,48,59,0.6)', 2, 7);
 
   readouts(beta);
 }

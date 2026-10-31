@@ -9,16 +9,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+TC:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#06070d; --bg2:#0a0d18; --ink:#e9ecf5; --muted:#8b93ad; --faint:#5b6480;
-    --line:rgba(140,160,210,.14); --panel:rgba(16,20,38,.6);
-    --photon:#6fd3ff; --massive:#ffb04d; --grid:rgba(120,150,210,.07);
-    --ok:#54e0a6; --crit:#ff7a5c; --gold:#f3c969;
+    --bg:#f7f3ea; --bg2:#efe9db; --ink:#26303b; --muted:#566170; --faint:#7d8794;
+    --line:#ddd5c4; --panel:rgba(255,253,248,.85);
+    --photon:#0b6f9c; --massive:#c26d00; --grid:rgba(60,80,110,.07);
+    --ok:#1f8a5b; --crit:#c2412d; --gold:#a86b00;
     --mono:'IBM Plex Mono',ui-monospace,monospace;
     --sans:'IBM Plex Sans TC',system-ui,sans-serif;
     --disp:'Fraunces',Georgia,serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:linear-gradient(180deg,var(--bg),var(--bg2) 70%,#04050a);color:var(--ink);
+  body{background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--ink);
     font-family:var(--sans);min-height:100vh;-webkit-font-smoothing:antialiased}
   header{max-width:1280px;margin:0 auto;padding:30px 26px 4px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:10px}
   .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--photon);opacity:.8}
@@ -31,10 +31,10 @@
   main{max-width:1280px;margin:0 auto;padding:16px 26px 50px;display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start}
   @media(max-width:960px){main{grid-template-columns:1fr;padding:12px 14px 40px}}
 
-  .stage{position:relative;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#070912}
+  .stage{position:relative;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fbf8f1}
   canvas{display:block;width:100%;height:auto;aspect-ratio:1/1}
   .ovl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
-    background:rgba(5,6,12,.74);backdrop-filter:blur(3px);z-index:4;transition:.3s;padding:24px}
+    background:rgba(247,243,234,.82);backdrop-filter:blur(3px);z-index:4;transition:.3s;padding:24px}
   .ovl.hide{opacity:0;pointer-events:none}
   .ovl div{max-width:320px}
   .ovl .big{font-family:var(--disp);font-size:24px;color:var(--gold);margin-bottom:8px}
@@ -51,32 +51,32 @@
   .ctl .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:10px}
   .ctl label{font-size:13.5px;font-weight:500}
   .ctl .val{font-family:var(--mono);font-size:12.5px;color:var(--gold)}
-  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:99px;outline:none;background:linear-gradient(90deg,#2a3a66,var(--photon))}
-  input[type=range].mass{background:linear-gradient(90deg,#2a3a66,var(--gold),var(--crit))}
-  input[type=range].rad{background:linear-gradient(90deg,#2a3a66,var(--photon),#bfe9ff)}
-  input[type=range].ang{background:linear-gradient(90deg,#3a2a4a,var(--massive))}
-  input[type=range].spd{background:linear-gradient(90deg,#23304a,var(--massive))}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:99px;outline:none;background:linear-gradient(90deg,#c9d6e6,var(--photon))}
+  input[type=range].mass{background:linear-gradient(90deg,#e8d9b5,var(--gold),var(--crit))}
+  input[type=range].rad{background:linear-gradient(90deg,#c9d6e6,var(--photon),#7cc4e6)}
+  input[type=range].ang{background:linear-gradient(90deg,#e6d6c4,var(--massive))}
+  input[type=range].spd{background:linear-gradient(90deg,#e6d6c4,var(--massive))}
   input[type=range]:disabled{opacity:.3}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;
-    background:radial-gradient(circle at 35% 30%,#fff,#cfd7ee 45%,#8893b6);border:1px solid rgba(255,255,255,.7);cursor:grab;box-shadow:0 2px 8px rgba(0,0,0,.6)}
-  input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;border:1px solid #fff;background:#cfd7ee;cursor:grab}
+    background:radial-gradient(circle at 35% 30%,#fff,#eef1f6 45%,#b9c2d2);border:1px solid #9aa6b8;cursor:grab;box-shadow:0 2px 6px rgba(38,48,59,.3)}
+  input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;border:1px solid #9aa6b8;background:#eef1f6;cursor:grab}
 
   .seg{display:flex;gap:0;border:1px solid var(--line);border-radius:9px;overflow:hidden}
   .seg button{flex:1;background:transparent;border:none;color:var(--muted);font-family:var(--mono);font-size:12.5px;padding:9px;cursor:pointer;transition:.2s}
-  .seg button.on{background:rgba(111,211,255,.14);color:var(--photon)}
-  .seg button.on.m{background:rgba(255,176,77,.14);color:var(--massive)}
+  .seg button.on{background:rgba(11,111,156,.12);color:var(--photon)}
+  .seg button.on.m{background:rgba(194,109,0,.12);color:var(--massive)}
 
   .status{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:12.5px;padding:9px 12px;border-radius:9px;border:1px solid var(--line);margin-bottom:12px}
   .dot{width:9px;height:9px;border-radius:50%;background:var(--crit);box-shadow:0 0 10px var(--crit)}
-  .status.bh{border-color:rgba(84,224,166,.4);color:var(--ok)} .status.bh .dot{background:var(--ok);box-shadow:0 0 10px var(--ok)}
+  .status.bh{border-color:rgba(31,138,91,.45);color:var(--ok)} .status.bh .dot{background:var(--ok);box-shadow:0 0 10px var(--ok)}
 
-  .btn{width:100%;font-family:var(--mono);font-size:13px;letter-spacing:.1em;padding:12px;border-radius:10px;cursor:pointer;border:1px solid var(--photon);background:rgba(111,211,255,.12);color:var(--photon);transition:.2s;margin-top:4px}
-  .btn:hover:not(:disabled){background:rgba(111,211,255,.2)}
+  .btn{width:100%;font-family:var(--mono);font-size:13px;letter-spacing:.1em;padding:12px;border-radius:10px;cursor:pointer;border:1px solid var(--photon);background:rgba(11,111,156,.08);color:var(--photon);transition:.2s;margin-top:4px}
+  .btn:hover:not(:disabled){background:rgba(11,111,156,.16)}
   .btn:disabled{opacity:.3;cursor:not-allowed;border-color:var(--line);color:var(--muted);background:transparent}
   .mini{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:8px;line-height:1.6}
 
   .res{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border-radius:10px;overflow:hidden;border:1px solid var(--line);margin-top:2px}
-  .res .c{background:rgba(10,13,26,.85);padding:11px 12px}
+  .res .c{background:#fffdf8;padding:11px 12px}
   .res .c.full{grid-column:1/-1}
   .res .k{font-size:11px;color:var(--muted);margin-bottom:4px}
   .res .v{font-family:var(--mono);font-size:14.5px;color:var(--ink)}
@@ -102,7 +102,7 @@
     <div class="ovl" id="ovl"><div>
       <div class="big">尚未塌縮成黑洞</div>
       <div class="small">這個模擬只在天體落入自身史瓦西半徑（R ≤ r<sub>s</sub>）後才開放發射。<br>請調整「黑洞設定」的質量／半徑，或直接按下方按鈕。</div>
-      <button class="btn" id="ovlCollapse" style="margin-top:14px;border-color:var(--crit);color:var(--crit);background:rgba(255,122,92,.1)">⤵ 壓縮成黑洞</button>
+      <button class="btn" id="ovlCollapse" style="margin-top:14px;border-color:var(--crit);color:var(--crit);background:rgba(194,65,45,.08)">⤵ 壓縮成黑洞</button>
     </div></div>
   </section>
 
@@ -119,7 +119,7 @@
         <div class="row"><label>半徑 R</label><span class="val" id="rVal">10⁸·⁸ m</span></div>
         <input id="rSld" class="rad" type="range" min="-2" max="15" step="0.01" value="8.8">
       </div>
-      <button class="btn" id="collapse" style="border-color:var(--crit);color:var(--crit);background:rgba(255,122,92,.1)">⤵ 壓縮成黑洞</button>
+      <button class="btn" id="collapse" style="border-color:var(--crit);color:var(--crit);background:rgba(194,65,45,.08)">⤵ 壓縮成黑洞</button>
       <div class="mini" id="rsInfo"></div>
     </div>
 
@@ -253,10 +253,10 @@ function drawScene(){
   ctx.clearRect(0,0,W,H);
   // 背景
   const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,W*0.7);
-  bg.addColorStop(0,"#0a0e1a");bg.addColorStop(1,"#06070d");
+  bg.addColorStop(0,"#fffdf8");bg.addColorStop(1,"#f1ece0");
   ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
   // 格線（每 r_s）
-  ctx.lineWidth=1; ctx.strokeStyle="rgba(120,150,210,0.06)";
+  ctx.lineWidth=1; ctx.strokeStyle="rgba(60,80,110,0.08)";
   for(let i=-VIEW;i<=VIEW;i++){ if(i===0)continue;
     ctx.beginPath();ctx.moveTo(X(i),0);ctx.lineTo(X(i),H);ctx.stroke();
     ctx.beginPath();ctx.moveTo(0,Y(i));ctx.lineTo(W,Y(i));ctx.stroke();
@@ -265,19 +265,19 @@ function drawScene(){
   if(!bh){ return; }
 
   // 參考圈：ISCO 3r_s、b_crit 2.598、光子球 1.5
-  refCircle(3, "rgba(160,255,210,0.30)","3 r_s · ISCO",[2,6]);
-  refCircle(2.598,"rgba(255,170,120,0.40)","2.6 r_s · 光子捕獲界",[4,5]);
-  refCircle(1.5,"rgba(120,200,255,0.45)","1.5 r_s · 光子球",[2,5]);
+  refCircle(3, "rgba(31,138,91,0.55)","3 r_s · ISCO",[2,6]);
+  refCircle(2.598,"rgba(194,90,40,0.6)","2.6 r_s · 光子捕獲界",[4,5]);
+  refCircle(1.5,"rgba(11,111,156,0.65)","1.5 r_s · 光子球",[2,5]);
 
   // 事件視界（純黑 2D 圓 + 細邊）
   ctx.beginPath();ctx.arc(cx,cy,PX,0,7);ctx.fillStyle="#000";ctx.fill();
-  ctx.lineWidth=2;ctx.strokeStyle="rgba(255,140,90,0.85)";ctx.stroke();
-  ctx.fillStyle="rgba(255,150,120,0.8)";ctx.font="11px 'IBM Plex Mono'";
+  ctx.lineWidth=2;ctx.strokeStyle="rgba(194,90,40,0.9)";ctx.stroke();
+  ctx.fillStyle="rgba(170,70,40,0.95)";ctx.font="11px 'IBM Plex Mono'";
   ctx.fillText("r_s", cx-9, cy+PX+15);
 
   // 軌跡
   if(path){
-    const col=path.isP?"111,211,255":"255,176,77";
+    const col=path.isP?"11,111,156":"194,109,0";
     // 全路徑（暗）
     ctx.lineWidth=1.5;ctx.strokeStyle=`rgba(${col},0.28)`;
     ctx.beginPath();
@@ -293,12 +293,12 @@ function drawScene(){
     const s0=path.pts[0];
     drawArrow(s0, path.pts[Math.min(8,path.pts.length-1)], col);
     ctx.beginPath();ctx.arc(X(s0.x),Y(s0.y),4,0,7);ctx.fillStyle=`rgba(${col},1)`;ctx.fill();
-    ctx.fillStyle="rgba(200,210,235,0.7)";ctx.font="10px 'IBM Plex Mono'";
+    ctx.fillStyle="rgba(86,97,112,0.95)";ctx.font="10px 'IBM Plex Mono'";
     ctx.fillText("起點 10 r_s", X(s0.x)-4, Y(s0.y)-12);
     // 移動中的粒子
     const p=path.pts[k];
     ctx.beginPath();ctx.arc(X(p.x),Y(p.y),5,0,7);
-    ctx.fillStyle=`rgba(${col},1)`;ctx.shadowColor=`rgba(${col},0.9)`;ctx.shadowBlur=12;ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle=`rgba(${col},1)`;ctx.shadowColor=`rgba(${col},0.55)`;ctx.shadowBlur=10;ctx.fill();ctx.shadowBlur=0;
   }
 }
 function refCircle(rRs,color,label,dash){
